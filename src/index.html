@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.vrchat.cloud; font-src 'self' data:;"
+    />
+    <title>SleepChat</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: #0f1115;
+        color: #e5e7eb;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .user-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .user-name {
+        font-size: 14px;
+        color: #e5e7eb;
+      }
+      .user-header button {
+        margin: 0;
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 12px;
+      }
+      .card {
+        background: #0b1220;
+        border: 1px solid #1f2937;
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+      .view {
+        display: none;
+      }
+      .view.active {
+        display: block;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        margin-bottom: 6px;
+        color: #9ca3af;
+      }
+      input {
+        width: 100%;
+        background: #111827;
+        border: 1px solid #1f2937;
+        color: #e5e7eb;
+        border-radius: 8px;
+        padding: 8px 10px;
+        margin-bottom: 8px;
+      }
+      .status {
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        display: inline-block;
+        margin-bottom: 12px;
+      }
+      .status.on {
+        background: #134e4a;
+        color: #5eead4;
+      }
+      .status.off {
+        background: #1f2937;
+        color: #9ca3af;
+      }
+      textarea {
+        width: 100%;
+        min-height: 140px;
+        background: #111827;
+        border: 1px solid #1f2937;
+        color: #e5e7eb;
+        border-radius: 8px;
+        padding: 10px;
+        resize: vertical;
+      }
+      button {
+        margin-top: 8px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: none;
+        background: #2563eb;
+        color: white;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #374151;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .row.space {
+        justify-content: space-between;
+      }
+      .hint {
+        font-size: 11px;
+        color: #9ca3af;
+      }
+      .modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal.active {
+        display: flex;
+      }
+      .modal-card {
+        width: 320px;
+        background: #0b1220;
+        border: 1px solid #1f2937;
+        border-radius: 10px;
+        padding: 16px;
+      }
+      .log {
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 12px;
+      }
+      .log-item {
+        background: #111827;
+        border: 1px solid #1f2937;
+        border-radius: 6px;
+        padding: 6px 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>SleepChat</h1>
+      <div id="user-header" class="user-header" style="display: none;">
+        <span id="user-display-name" class="user-name">User</span>
+        <button id="logout" class="secondary">Logout</button>
+      </div>
+    </div>
+    
+    <!-- Login View -->
+    <div id="login-view" class="view active">
+      <div class="card">
+        <strong>Login to VRChat</strong>
+        <label for="username">Username or email</label>
+        <input id="username" autocomplete="username" />
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" />
+        <div class="row">
+          <button id="login">Login</button>
+        </div>
+        <div class="hint" id="auth-hint"></div>
+      </div>
+    </div>
+
+    <!-- Main View -->
+    <div id="main-view" class="view">
+      <div class="card">
+        <div class="row space">
+          <strong>Sleep Mode</strong>
+          <div id="status" class="status off">Off</div>
+        </div>
+        <p class="hint">When enabled, SleepChat will automatically respond to invite requests from whitelisted users.</p>
+        <button id="toggle">Start Sleep Mode</button>
+      </div>
+
+      <div class="card">
+        <label for="whitelist">Whitelist (one per line)</label>
+        <textarea id="whitelist" placeholder="userId or display name"></textarea>
+        <button id="save" class="secondary">Save whitelist</button>
+      </div>
+
+      <div class="card">
+        <strong>Activity Log</strong>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+    </div>
+
+    <!-- 2FA Modal -->
+    <div id="modal" class="modal">
+      <div class="modal-card">
+        <strong id="modal-title">Two-factor verification</strong>
+        <p class="hint" id="modal-hint">Enter your verification code.</p>
+        <label for="modal-code">Code</label>
+        <input id="modal-code" autocomplete="one-time-code" />
+        <div class="row">
+          <button id="modal-submit">Verify</button>
+          <button id="modal-toggle" class="secondary">Use backup code</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>

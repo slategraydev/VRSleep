@@ -1,0 +1,13 @@
+{
+  "name": "sleepchat",
+  "version": "0.1.0",
+  "private": true,
+  "productName": "SleepChat",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^30.1.0"
+  }
+}
