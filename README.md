@@ -1,4 +1,4 @@
-# SleepChat
+# VRSleep
 
 A minimal Electron app to auto-respond to VRChat invite requests from a whitelist while you're sleeping in VR.
 
@@ -27,7 +27,7 @@ npm run dist
 Output goes to `dist/`.
 
 ## Auto-updates (GitHub Releases)
-SleepChat uses `electron-updater` to check GitHub Releases on startup. If an update
+VRSleep uses `electron-updater` to check GitHub Releases on startup. If an update
 is found, users are prompted to download and install it.
 
 **Required:** update the GitHub repo info in `package.json`:

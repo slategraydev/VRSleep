@@ -108,6 +108,9 @@ async function loadWhitelist() {
   whitelistInput.value = list.join('\n');
   whitelistDirty = false;
   setWhitelistStatus('Saved');
+  if (list.length > 0) {
+    appendLog(`Whitelist: ${list.join(', ')}`);
+  }
 }
 
 function parseWhitelist(text) {
@@ -122,6 +125,11 @@ async function saveWhitelist() {
   await window.sleepchat.setWhitelist(list);
   whitelistDirty = false;
   setWhitelistStatus('Saved');
+  if (list.length > 0) {
+    appendLog(`Whitelist: ${list.join(', ')}`);
+  } else {
+    appendLog('Whitelist cleared.');
+  }
 }
 
 function scheduleAutoSave() {

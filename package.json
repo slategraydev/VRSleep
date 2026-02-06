@@ -1,8 +1,8 @@
 {
-  "name": "sleepchat",
+  "name": "vrsleep",
   "version": "0.1.0",
   "private": true,
-  "productName": "SleepChat",
+  "productName": "VRSleep",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
@@ -17,8 +17,8 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.sleepchat.app",
-    "productName": "SleepChat",
+    "appId": "com.vrsleep.app",
+    "productName": "VRSleep",
     "directories": {
       "output": "dist"
     },
