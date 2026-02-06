@@ -38,8 +38,6 @@ is found, users are prompted to download and install it.
 Then publish releases via GitHub, and the app will offer updates.
 
 ## Environment variables
-- `VRC_API_KEY`: Optional. API key if your endpoint requires it.
-- `VRC_USER_AGENT`: Optional. User agent string for requests.
 - `SLEEPCHAT_POLL_MS`: Optional. Poll interval in milliseconds (default 15000).
 - `SLEEPCHAT_MAX_OLD_SPACE_MB`: Optional. V8 old-space limit (default 128).
 
