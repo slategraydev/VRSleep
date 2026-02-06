@@ -14,6 +14,23 @@
         font-family: "Segoe UI", system-ui, sans-serif;
         background: #0f1115;
         color: #e5e7eb;
+        --color-bg: #111315;
+        --color-card: #16181b;
+        --color-border: #262a2e;
+        --color-text: #e3e5e8;
+        --color-muted: #a2a8b0;
+        --color-input-bg: #14171a;
+        --color-primary: #2f7d5e;
+        --color-primary-text: #f5f7f9;
+        --color-secondary: #2a2f34;
+        --color-secondary-text: #d8dde3;
+        --color-ghost-border: #3a4147;
+        --color-ghost-text: #c8d0d8;
+        --color-status-on-bg: #1e3a2f;
+        --color-status-on-text: #a9e5c8;
+        --color-status-off-bg: #24282c;
+        --color-status-off-text: #a2a8b0;
+        --color-warning: #d9b86a;
       }
       body {
         margin: 0;
@@ -44,8 +61,8 @@
         margin: 0 0 12px;
       }
       .card {
-        background: #0b1220;
-        border: 1px solid #1f2937;
+        background: var(--color-card);
+        border: 1px solid var(--color-border);
         border-radius: 10px;
         padding: 12px;
         margin-bottom: 12px;
@@ -60,13 +77,13 @@
         display: block;
         font-size: 12px;
         margin-bottom: 6px;
-        color: #9ca3af;
+        color: var(--color-muted);
       }
       input {
         width: 100%;
-        background: #111827;
-        border: 1px solid #1f2937;
-        color: #e5e7eb;
+        background: var(--color-input-bg);
+        border: 1px solid var(--color-border);
+        color: var(--color-text);
         border-radius: 8px;
         padding: 8px 10px;
         margin-bottom: 8px;
@@ -79,34 +96,46 @@
         margin-bottom: 12px;
       }
       .status.on {
-        background: #134e4a;
-        color: #5eead4;
+        background: var(--color-status-on-bg);
+        color: var(--color-status-on-text);
       }
       .status.off {
-        background: #1f2937;
-        color: #9ca3af;
+        background: var(--color-status-off-bg);
+        color: var(--color-status-off-text);
       }
       textarea {
         width: 100%;
         min-height: 140px;
-        background: #111827;
-        border: 1px solid #1f2937;
-        color: #e5e7eb;
+        max-height: 220px;
+        background: var(--color-input-bg);
+        border: 1px solid var(--color-border);
+        color: var(--color-text);
         border-radius: 8px;
         padding: 10px;
         resize: vertical;
+        box-sizing: border-box;
       }
       button {
         margin-top: 8px;
         padding: 8px 12px;
         border-radius: 8px;
         border: none;
-        background: #2563eb;
-        color: white;
+        background: var(--color-primary);
+        color: var(--color-primary-text);
         cursor: pointer;
       }
+      button.primary {
+        background: var(--color-primary);
+        color: var(--color-primary-text);
+      }
       button.secondary {
-        background: #374151;
+        background: var(--color-secondary);
+        color: var(--color-secondary-text);
+      }
+      button.ghost {
+        background: transparent;
+        border: 1px solid var(--color-ghost-border);
+        color: var(--color-ghost-text);
       }
       .row {
         display: flex;
@@ -118,7 +147,12 @@
       }
       .hint {
         font-size: 11px;
-        color: #9ca3af;
+        color: var(--color-muted);
+      }
+      .status-text {
+        margin-top: 6px;
+        font-size: 11px;
+        color: var(--color-muted);
       }
       .modal {
         position: fixed;
@@ -185,13 +219,13 @@
           <div id="status" class="status off">Off</div>
         </div>
         <p class="hint">When enabled, SleepChat will automatically respond to invite requests from whitelisted users.</p>
-        <button id="toggle">Start Sleep Mode</button>
+        <button id="toggle" class="primary">Start Sleep Mode</button>
       </div>
 
       <div class="card">
         <label for="whitelist">Whitelist (one per line)</label>
         <textarea id="whitelist" placeholder="userId or display name"></textarea>
-        <button id="save" class="secondary">Save whitelist</button>
+        <div id="whitelist-status" class="status-text">Saved</div>
       </div>
 
       <div class="card">

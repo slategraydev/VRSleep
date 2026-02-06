@@ -1,0 +1,68 @@
+const { BrowserWindow, Menu } = require('electron');
+const path = require('path');
+
+function createMainWindow(onCheckForUpdates) {
+  const mainWindow = new BrowserWindow({
+    width: 420,
+    height: 520,
+    show: false,
+    backgroundColor: '#0f1115',
+    webPreferences: {
+      preload: path.join(__dirname, '..', 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      devTools: !require('electron').app.isPackaged,
+      spellcheck: false,
+      backgroundThrottling: true
+    }
+  });
+
+  mainWindow.once('ready-to-show', () => mainWindow.show());
+  mainWindow.loadFile(path.join(__dirname, '..', 'index.html'));
+
+  const menu = Menu.buildFromTemplate([
+    {
+      label: 'View',
+      submenu: [
+        {
+          label: 'Toggle DevTools',
+          accelerator: 'F12',
+          click: () => {
+            mainWindow.webContents.toggleDevTools();
+          }
+        },
+        { type: 'separator' },
+        { role: 'reload' },
+        { role: 'forceReload' }
+      ]
+    },
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'Check for Updates',
+          click: () => onCheckForUpdates()
+        }
+      ]
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' }
+      ]
+    }
+  ]);
+  Menu.setApplicationMenu(menu);
+
+  return mainWindow;
+}
+
+module.exports = {
+  createMainWindow
+};

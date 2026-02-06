@@ -17,6 +17,26 @@ npm install
 npm start
 ```
 
+## Build an installer
+This uses `electron-builder` to generate a Windows installer (NSIS).
+
+```powershell
+npm run dist
+```
+
+Output goes to `dist/`.
+
+## Auto-updates (GitHub Releases)
+SleepChat uses `electron-updater` to check GitHub Releases on startup. If an update
+is found, users are prompted to download and install it.
+
+**Required:** update the GitHub repo info in `package.json`:
+
+- `build.publish[0].owner`
+- `build.publish[0].repo`
+
+Then publish releases via GitHub, and the app will offer updates.
+
 ## Environment variables
 - `VRC_API_KEY`: Optional. API key if your endpoint requires it.
 - `VRC_USER_AGENT`: Optional. User agent string for requests.

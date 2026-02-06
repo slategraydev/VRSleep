@@ -2,12 +2,12 @@ const loginView = document.getElementById('login-view');
 const mainView = document.getElementById('main-view');
 const userHeader = document.getElementById('user-header');
 const whitelistInput = document.getElementById('whitelist');
-const saveButton = document.getElementById('save');
 const toggleButton = document.getElementById('toggle');
 const statusBadge = document.getElementById('status');
 const logList = document.getElementById('log');
 const userDisplayName = document.getElementById('user-display-name');
 const authHint = document.getElementById('auth-hint');
+const whitelistStatus = document.getElementById('whitelist-status');
 const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
 const loginButton = document.getElementById('login');
@@ -22,6 +22,8 @@ const modalToggle = document.getElementById('modal-toggle');
 let twoFactorType = 'totp';
 let twoFactorMethods = [];
 let currentUser = null;
+let whitelistDirty = false;
+let saveTimer = null;
 
 function showView(view) {
   loginView.classList.remove('active');
@@ -41,6 +43,11 @@ function appendLog(message) {
   const timestamp = new Date().toLocaleTimeString();
   item.textContent = `[${timestamp}] ${message}`;
   logList.prepend(item);
+}
+
+function setWhitelistStatus(text, isDirty = false) {
+  whitelistStatus.textContent = text;
+  whitelistStatus.style.color = isDirty ? 'var(--color-warning)' : 'var(--color-muted)';
 }
 
 function setAuthHint(message, isError = false) {
@@ -99,6 +106,8 @@ async function refreshAuthStatus() {
 async function loadWhitelist() {
   const list = await window.sleepchat.getWhitelist();
   whitelistInput.value = list.join('\n');
+  whitelistDirty = false;
+  setWhitelistStatus('Saved');
 }
 
 function parseWhitelist(text) {
@@ -108,10 +117,25 @@ function parseWhitelist(text) {
     .filter(Boolean);
 }
 
-saveButton.addEventListener('click', async () => {
+async function saveWhitelist() {
   const list = parseWhitelist(whitelistInput.value);
   await window.sleepchat.setWhitelist(list);
-  appendLog(`Whitelist saved (${list.length}).`);
+  whitelistDirty = false;
+  setWhitelistStatus('Saved');
+}
+
+function scheduleAutoSave() {
+  whitelistDirty = true;
+  setWhitelistStatus('Unsaved', true);
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    setWhitelistStatus('Saving...');
+    await saveWhitelist();
+  }, 600);
+}
+
+whitelistInput.addEventListener('input', () => {
+  scheduleAutoSave();
 });
 
 loginButton.addEventListener('click', async () => {
