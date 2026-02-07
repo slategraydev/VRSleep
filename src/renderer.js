@@ -13,18 +13,30 @@ const passwordInput = document.getElementById('password');
 const loginButton = document.getElementById('login');
 const logoutButton = document.getElementById('logout');
 const updateButton = document.getElementById('update-btn');
+const manageWhitelistButton = document.getElementById('manage-whitelist');
 const modal = document.getElementById('modal');
 const modalTitle = document.getElementById('modal-title');
 const modalHint = document.getElementById('modal-hint');
 const modalCode = document.getElementById('modal-code');
 const modalSubmit = document.getElementById('modal-submit');
 const modalToggle = document.getElementById('modal-toggle');
+const friendsModal = document.getElementById('friends-modal');
+const friendsSearch = document.getElementById('friends-search');
+const friendsList = document.getElementById('friends-list');
+const friendsSave = document.getElementById('friends-save');
+const friendsClose = document.getElementById('friends-close');
+const tabWhitelist = document.getElementById('tab-whitelist');
+const tabActivity = document.getElementById('tab-activity');
+const contentWhitelist = document.getElementById('content-whitelist');
+const contentActivity = document.getElementById('content-activity');
 
 let twoFactorType = 'totp';
 let twoFactorMethods = [];
 let currentUser = null;
 let whitelistDirty = false;
 let saveTimer = null;
+let allFriends = [];
+let selectedFriends = new Set();
 
 function showView(view) {
   loginView.classList.remove('active');
@@ -46,9 +58,9 @@ function appendLog(message) {
   logList.prepend(item);
 }
 
-function setWhitelistStatus(text, isDirty = false) {
+function setWhitelistStatus(text, state = 'saved') {
   whitelistStatus.textContent = text;
-  whitelistStatus.style.color = isDirty ? 'var(--color-warning)' : 'var(--color-muted)';
+  whitelistStatus.className = `whitelist-status ${state}`;
 }
 
 function setAuthHint(message, isError = false) {
@@ -125,7 +137,7 @@ async function saveWhitelist() {
   const list = parseWhitelist(whitelistInput.value);
   await window.sleepchat.setWhitelist(list);
   whitelistDirty = false;
-  setWhitelistStatus('Saved');
+  setWhitelistStatus('Saved', 'saved');
   if (list.length > 0) {
     appendLog(`Whitelist: ${list.join(', ')}`);
   } else {
@@ -135,16 +147,30 @@ async function saveWhitelist() {
 
 function scheduleAutoSave() {
   whitelistDirty = true;
-  setWhitelistStatus('Unsaved', true);
+  setWhitelistStatus('Unsaved', 'unsaved');
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
-    setWhitelistStatus('Saving...');
+    setWhitelistStatus('Saving...', 'saving');
     await saveWhitelist();
-  }, 600);
+  }, 1000);
 }
 
 whitelistInput.addEventListener('input', () => {
   scheduleAutoSave();
+});
+
+tabWhitelist.addEventListener('click', () => {
+  tabWhitelist.classList.add('active');
+  tabActivity.classList.remove('active');
+  contentWhitelist.classList.add('active');
+  contentActivity.classList.remove('active');
+});
+
+tabActivity.addEventListener('click', () => {
+  tabActivity.classList.add('active');
+  tabWhitelist.classList.remove('active');
+  contentActivity.classList.add('active');
+  contentWhitelist.classList.remove('active');
 });
 
 loginButton.addEventListener('click', async () => {
@@ -244,6 +270,136 @@ toggleButton.addEventListener('click', async () => {
 updateButton.addEventListener('click', async () => {
   await window.sleepchat.downloadUpdate();
 });
+
+manageWhitelistButton.addEventListener('click', async () => {
+  appendLog('Loading friends list...');
+  const result = await window.sleepchat.getFriends();
+  
+  if (!result.ok) {
+    appendLog(`Failed to load friends: ${result.error}`);
+    return;
+  }
+  
+  allFriends = result.friends;
+  
+  // Parse current whitelist to pre-select friends
+  const currentWhitelist = whitelistInput.value
+    .split('\n')
+    .map(line => line.trim().toLowerCase())
+    .filter(Boolean);
+  
+  selectedFriends.clear();
+  allFriends.forEach(friend => {
+    const idMatch = currentWhitelist.includes(friend.id.toLowerCase());
+    const nameMatch = currentWhitelist.includes(friend.displayName.toLowerCase());
+    if (idMatch || nameMatch) {
+      selectedFriends.add(friend.id);
+    }
+  });
+  
+  renderFriendsList(allFriends);
+  friendsModal.classList.add('active');
+});
+
+friendsSearch.addEventListener('input', () => {
+  const query = friendsSearch.value.toLowerCase();
+  const filtered = allFriends.filter(friend => 
+    friend.displayName.toLowerCase().includes(query) ||
+    friend.id.toLowerCase().includes(query)
+  );
+  renderFriendsList(filtered);
+});
+
+friendsClose.addEventListener('click', () => {
+  friendsModal.classList.remove('active');
+  friendsSearch.value = '';
+});
+
+friendsSave.addEventListener('click', () => {
+  // Build list from selected friends (use display names)
+  const selectedNames = allFriends
+    .filter(f => selectedFriends.has(f.id))
+    .map(f => f.displayName);
+  
+  // Get existing whitelist entries
+  const existingEntries = whitelistInput.value
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean);
+  
+  // Combine existing and new entries, removing duplicates (case-insensitive)
+  const existingLower = existingEntries.map(e => e.toLowerCase());
+  const newEntries = selectedNames.filter(name => 
+    !existingLower.includes(name.toLowerCase())
+  );
+  
+  // Append new entries to the end
+  const combined = [...existingEntries, ...newEntries];
+  
+  whitelistInput.value = combined.join('\n');
+  setWhitelistStatus('Saving...', 'saving');
+  scheduleAutoSave();
+  
+  friendsModal.classList.remove('active');
+  friendsSearch.value = '';
+  
+  if (newEntries.length > 0) {
+    appendLog(`Added ${newEntries.length} new friend(s) to whitelist`);
+  } else {
+    appendLog('All selected friends already in whitelist');
+  }
+});
+
+function renderFriendsList(friends) {
+  friendsList.innerHTML = '';
+  
+  if (friends.length === 0) {
+    friendsList.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--color-muted);">No friends found</div>';
+    return;
+  }
+  
+  friends.forEach(friend => {
+    const item = document.createElement('div');
+    item.className = 'friend-item';
+    if (selectedFriends.has(friend.id)) {
+      item.classList.add('selected');
+    }
+    
+    const avatar = document.createElement('img');
+    avatar.className = 'friend-avatar';
+    avatar.src = friend.thumbnailUrl || '';
+    avatar.onerror = () => { avatar.style.display = 'none'; };
+    
+    const info = document.createElement('div');
+    info.className = 'friend-info';
+    
+    const name = document.createElement('div');
+    name.className = 'friend-name';
+    name.textContent = friend.displayName;
+    
+    const status = document.createElement('div');
+    status.className = 'friend-status';
+    status.textContent = friend.statusDescription || friend.status;
+    
+    info.appendChild(name);
+    info.appendChild(status);
+    
+    item.appendChild(avatar);
+    item.appendChild(info);
+    
+    item.addEventListener('click', () => {
+      if (selectedFriends.has(friend.id)) {
+        selectedFriends.delete(friend.id);
+        item.classList.remove('selected');
+      } else {
+        selectedFriends.add(friend.id);
+        item.classList.add('selected');
+      }
+    });
+    
+    friendsList.appendChild(item);
+  });
+}
 
 window.sleepchat.onLog((message) => appendLog(message));
 

@@ -1,6 +1,6 @@
 const { app, BrowserWindow } = require('electron');
 const { getWhitelist, setWhitelist } = require('./whitelist-store');
-const { fetchInvites, sendInvite, deleteNotification } = require('./vrcapi');
+const { fetchInvites, sendInvite, deleteNotification, getFriends } = require('./vrcapi');
 const { login, verifyTwoFactor, logout, getAuthStatus, isReadyForApi } = require('./vrcauth');
 const { applyLowRamSettings } = require('./main/low-ram');
 const updater = require('./main/updater');
@@ -50,7 +50,8 @@ app.whenReady().then(() => {
       logout,
       getStatus: getAuthStatus
     },
-    updater: updaterInstance
+    updater: updaterInstance,
+    getFriends
   });
 
   app.on('activate', () => {

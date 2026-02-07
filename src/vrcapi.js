@@ -108,8 +108,53 @@ async function deleteNotification(notificationId) {
   return await response.json();
 }
 
+async function getFriends() {
+  let allFriends = [];
+  let offset = 0;
+  const limit = 100;
+  let hasMore = true;
+
+  // Fetch all friends with pagination (don't include offline param to get ALL friends)
+  while (hasMore) {
+    const url = buildUrl(`/auth/user/friends?n=${limit}&offset=${offset}`);
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getHeaders()
+    });
+
+    if (!response.ok) {
+      throw new Error(`Friends fetch failed (${response.status})`);
+    }
+
+    const friends = await response.json();
+    if (!Array.isArray(friends) || friends.length === 0) {
+      hasMore = false;
+      break;
+    }
+
+    allFriends.push(...friends);
+    
+    // If we got fewer results than the limit, we've reached the end
+    if (friends.length < limit) {
+      hasMore = false;
+    } else {
+      offset += limit;
+    }
+  }
+  
+  return allFriends.map(friend => ({
+    id: friend.id,
+    displayName: friend.displayName,
+    username: friend.username,
+    status: friend.status || 'offline',
+    statusDescription: friend.statusDescription || '',
+    thumbnailUrl: friend.currentAvatarThumbnailImageUrl || friend.profilePicOverride || ''
+  }));
+}
+
 module.exports = {
   fetchInvites,
   sendInvite,
-  deleteNotification
+  deleteNotification,
+  getFriends
 };

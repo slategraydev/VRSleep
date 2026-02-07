@@ -47,6 +47,10 @@ function createSleepMode({
       const senderName = normalizeEntry(invite.senderDisplayName || invite.senderUsername || invite.displayName);
       const displayName = invite.senderDisplayName || invite.senderUsername || senderIdRaw;
 
+      // Debug logging to help diagnose matching issues
+      log(`Checking invite from: "${displayName}" (ID: ${senderIdRaw}, normalized name: "${senderName}")`);
+      log(`Whitelist entries: ${whitelist.join(', ')}`);
+
       // Skip if we've already handled this sender in this session
       if (handledSenderIds.has(senderIdRaw)) {
         try {

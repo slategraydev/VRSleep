@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('sleepchat', {
   verifyTwoFactor: (type, code) => ipcRenderer.invoke('auth:verify', { type, code }),
   logout: () => ipcRenderer.invoke('auth:logout'),
   downloadUpdate: () => ipcRenderer.invoke('update:download'),
+  getFriends: () => ipcRenderer.invoke('friends:get'),
   onLog: (handler) => {
     ipcRenderer.removeAllListeners('log');
     ipcRenderer.on('log', (_event, message) => handler(message));

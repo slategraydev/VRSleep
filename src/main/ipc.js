@@ -5,7 +5,8 @@ function registerIpcHandlers({
   setWhitelist,
   sleepMode,
   auth,
-  updater
+  updater,
+  getFriends
 }) {
   ipcMain.handle('whitelist:get', () => getWhitelist());
   ipcMain.handle('whitelist:set', (_event, list) => setWhitelist(list));
@@ -55,6 +56,15 @@ function registerIpcHandlers({
       updater.startDownload();
     }
     return { ok: true };
+  });
+
+  ipcMain.handle('friends:get', async () => {
+    try {
+      const friends = await getFriends();
+      return { ok: true, friends };
+    } catch (error) {
+      return { ok: false, error: error.message };
+    }
   });
 }
 

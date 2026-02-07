@@ -155,6 +155,28 @@
         font-size: 11px;
         color: var(--color-muted);
       }
+      .whitelist-status {
+        font-size: 11px;
+        font-weight: 500;
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+      .whitelist-status.saved {
+        color: #4ade80;
+        background: rgba(74, 222, 128, 0.1);
+      }
+      .whitelist-status.saving {
+        color: var(--color-warning);
+        background: rgba(217, 184, 106, 0.1);
+      }
+      .whitelist-status.unsaved {
+        color: var(--color-warning);
+        background: rgba(217, 184, 106, 0.1);
+      }
+      .whitelist-status.error {
+        color: #f87171;
+        background: rgba(248, 113, 113, 0.1);
+      }
       .modal {
         position: fixed;
         inset: 0;
@@ -185,6 +207,83 @@
         border: 1px solid #1f2937;
         border-radius: 6px;
         padding: 6px 8px;
+      }
+      .friend-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px;
+        background: #111827;
+        border: 1px solid #1f2937;
+        border-radius: 6px;
+        margin-bottom: 6px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .friend-item:hover {
+        background: #1a1f2e;
+      }
+      .friend-item.selected {
+        background: var(--color-status-on-bg);
+        border-color: var(--color-primary);
+      }
+      .friend-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--color-secondary);
+        flex-shrink: 0;
+      }
+      .friend-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .friend-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--color-text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .friend-status {
+        font-size: 11px;
+        color: var(--color-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        border-bottom: 1px solid var(--color-border);
+      }
+      .tab {
+        padding: 8px 16px;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--color-muted);
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        margin: 0;
+        border-radius: 0;
+      }
+      .tab:hover {
+        color: var(--color-text);
+        background: transparent;
+      }
+      .tab.active {
+        color: var(--color-primary);
+        border-bottom-color: var(--color-primary);
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
       }
     </style>
   </head>
@@ -223,16 +322,26 @@
         <p class="hint">When enabled, SleepChat will automatically respond to invite requests from whitelisted users.</p>
         <button id="toggle" class="primary">Start Sleep Mode</button>
       </div>
-
-      <div class="card">
-        <label for="whitelist">Whitelist (one per line)</label>
-        <textarea id="whitelist" placeholder="userId or display name"></textarea>
-        <div id="whitelist-status" class="status-text">Saved</div>
       </div>
 
       <div class="card">
-        <strong>Activity Log</strong>
-        <div class="log" id="log"></div>
+        <div class="tabs">
+          <button id="tab-whitelist" class="tab active">Whitelist</button>
+          <button id="tab-activity" class="tab">Activity Log</button>
+        </div>
+
+        <div id="content-whitelist" class="tab-content active">
+          <div class="row space" style="margin-bottom: 6px;">
+            <label style="margin: 0;">Whitelist (one per line)</label>
+            <div id="whitelist-status" class="whitelist-status saved">Saved</div>
+          </div>
+          <textarea id="whitelist" placeholder="userId or display name"></textarea>
+          <button id="manage-whitelist" class="secondary">Select from Friends</button>
+        </div>
+
+        <div id="content-activity" class="tab-content">
+          <div class="log" id="log"></div>
+        </div>
       </div>
     </div>
     </div>
@@ -249,6 +358,25 @@
           <button id="modal-toggle" class="secondary">Use backup code</button>
         </div>
       </div>
+    </div>
+
+    <!-- Friends Selector Modal -->
+    <div id="friends-modal" class="modal">
+      <div class="modal-card" style="width: 420px; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <strong>Add Friends to Whitelist</strong>
+          <button id="friends-close" class="ghost" style="margin: 0; padding: 4px 8px;">✕</button>
+        </div>
+        <input id="friends-search" placeholder="Search friends..." style="margin-bottom: 12px;" />
+        <div id="friends-list" style="flex: 1; overflow-y: auto; margin-bottom: 12px;"></div>
+        <div class="row">
+          <button id="friends-save" class="primary">Add Selected</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 24px; font-size: 11px; color: var(--color-muted);">
+      Made with ❤️ by -Jesski-, for itsLyxie and sheepsheep.
     </div>
 
     <script src="renderer.js"></script>

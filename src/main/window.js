@@ -3,8 +3,8 @@ const path = require('path');
 
 function createMainWindow(onCheckForUpdates) {
   const mainWindow = new BrowserWindow({
-    width: 420,
-    height: 520,
+    width: 500,
+    height: 750,
     show: false,
     backgroundColor: '#0f1115',
     webPreferences: {
