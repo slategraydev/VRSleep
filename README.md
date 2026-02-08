@@ -1,7 +1,7 @@
 # VRSleep
-<img width="620" height="740" alt="image" src="https://github.com/user-attachments/assets/88bbffe3-9fce-49dd-8b6d-6d3761968e7a" />
+A minimal Electron app for automating simple VRChat tasks when you're sleeping. Auto respond to friend invite requests so they can join you, change your status automatically, and more!
 
-A minimal Electron app to auto-respond to VRChat invite requests from a whitelist while you're sleeping in VR.
+<img width="620" height="740" alt="image" src="https://github.com/user-attachments/assets/88bbffe3-9fce-49dd-8b6d-6d3761968e7a" />
 
 ## What it does
 - Polls VRChat invite notifications at a configurable interval.
