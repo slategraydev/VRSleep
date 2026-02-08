@@ -5,7 +5,7 @@
   "author": "Jesski <jess@jesski.com>",
   "private": true,
   "productName": "VRSleep",
-  "main": "src/main.js",
+  "main": "src/main/index.js",
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --dir",

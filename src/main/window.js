@@ -9,7 +9,7 @@ function createMainWindow(onCheckForUpdates) {
     icon: path.join(__dirname, '..', '..', 'images', 'icon.ico'),
     backgroundColor: '#0f1115',
     webPreferences: {
-      preload: path.join(__dirname, '..', 'preload.js'),
+      preload: path.join(__dirname, '..', 'preload', 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -20,7 +20,7 @@ function createMainWindow(onCheckForUpdates) {
   });
 
   mainWindow.once('ready-to-show', () => mainWindow.show());
-  mainWindow.loadFile(path.join(__dirname, '..', 'index.html'));
+  mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
   mainWindow.setTitle(`VRSleep - v${app.getVersion()}`);
 
   const menu = Menu.buildFromTemplate([

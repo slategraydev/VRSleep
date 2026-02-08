@@ -1,13 +1,13 @@
 const { app, BrowserWindow } = require('electron');
-const { getWhitelist, setWhitelist } = require('./whitelist-store');
-const { getSettings, setSettings } = require('./settings-store');
-const { fetchInvites, sendInvite, deleteNotification, getFriends, getCurrentUser, updateStatus } = require('./vrcapi');
-const { login, verifyTwoFactor, logout, getAuthStatus, isReadyForApi } = require('./vrcauth');
-const { applyLowRamSettings } = require('./main/low-ram');
-const updater = require('./main/updater');
-const { createMainWindow } = require('./main/window');
-const { createSleepMode } = require('./main/sleep-mode');
-const { registerIpcHandlers } = require('./main/ipc');
+const { getWhitelist, setWhitelist } = require('../stores/whitelist-store');
+const { getSettings, setSettings } = require('../stores/settings-store');
+const { fetchInvites, sendInvite, deleteNotification, getFriends, getCurrentUser, updateStatus } = require('../api/vrcapi');
+const { login, verifyTwoFactor, logout, getAuthStatus, isReadyForApi } = require('../api/vrcauth');
+const { applyLowRamSettings } = require('./low-ram');
+const updater = require('./updater');
+const { createMainWindow } = require('./window');
+const { createSleepMode } = require('./sleep-mode');
+const { registerIpcHandlers } = require('./ipc');
 
 let mainWindow;
 let updaterInstance = null;

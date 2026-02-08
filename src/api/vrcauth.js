@@ -1,4 +1,4 @@
-const { loadAuth, saveAuth, clearAuth } = require('./auth-store');
+const { loadAuth, saveAuth, clearAuth } = require('../stores/auth-store');
 
 const API_BASE = 'https://api.vrchat.cloud/api/1';
 let inMemoryAuth = null;
