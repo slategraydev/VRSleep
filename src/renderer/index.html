@@ -255,12 +255,15 @@
       }
       .tabs {
         display: flex;
+        justify-content: space-between;
         gap: 8px;
         margin-bottom: 4px;
         border-bottom: 1px solid var(--color-border);
       }
       .tab {
-        padding: 8px 16px;
+        flex: 1;
+        padding: 8px 0;
+        text-align: center;
         background: transparent;
         border: none;
         border-bottom: 2px solid transparent;
@@ -292,8 +295,6 @@
         width: 40px;
         height: 22px;
         flex-shrink: 0;
-        top: 10px;
-        left: -10px;
       }
       .switch input {
         opacity: 0;
@@ -377,7 +378,6 @@
         <div class="tabs">
           <button id="tab-whitelist" class="tab active">Whitelist</button>
           <button id="tab-customizations" class="tab">Customizations</button>
-          <button id="tab-slots" class="tab">Slot Manager</button>
           <button id="tab-activity" class="tab">Activity Log</button>
         </div>
 
@@ -388,22 +388,6 @@
           </div>
           <textarea id="whitelist" placeholder="userId or display name"></textarea>
           <button id="manage-whitelist" class="secondary" style="width: 100%; margin-top: 12px;">Select from Friends</button>
-        </div>
-
-        <div id="content-slots" class="tab-content">
-          <div class="row space" style="align-items: center; margin-bottom: 12px;">
-            <strong>Manage VRChat Message Slots</strong>
-            <div id="slots-status" class="status saved">Ready</div>
-          </div>
-          <div class="tabs" style="font-size: 11px; margin-bottom: 8px; border-bottom: 1px solid var(--color-border);">
-          <button id="subtab-invite" class="tab" style="padding: 4px 8px; font-size: 11px;">Invite</button>
-          <button id="subtab-response" class="tab active" style="padding: 4px 8px; font-size: 11px;">Response</button>
-          <button id="subtab-request" class="tab" style="padding: 4px 8px; font-size: 11px;">Request</button>
-          <button id="subtab-requestResponse" class="tab" style="padding: 4px 8px; font-size: 11px;">Req. Resp.</button>
-          </div>
-          <div id="slots-list" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
-            <!-- Slots will be injected here -->
-          </div>
         </div>
 
         <div id="content-customizations" class="tab-content" style="padding-top: 10px;">
@@ -417,9 +401,8 @@
             </div>
             <div class="row space" style="align-items: center; margin-bottom: 4px;">
               <p class="hint" style="margin: 0;">This status will be set when you enable sleep mode.</p>
-              <span id="status-char-count" class="hint" style="font-size: 10px;">0/32</span>
             </div>
-            <div class="row" style="gap: 8px; margin-top: 4px;">
+            <div class="row" style="gap: 8px; margin-top: 4px; align-items: center;">
               <select id="sleep-status" style="width: 90px; background: var(--color-input-bg); border: 1px solid var(--color-border); color: var(--color-text); border-radius: 8px; padding: 8px; box-sizing: border-box; flex-shrink: 0;">
                 <option value="none" style="color: #9ca3af; background: #111315;">None</option>
                 <option value="join me" style="color: #42CAFF; background: #111315;">Join Me</option>
@@ -428,6 +411,9 @@
                 <option value="busy" style="color: #C93131; background: #111315;">Busy</option>
               </select>
               <input id="sleep-status-description" placeholder="Status message..." style="margin: 0; flex: 1;" />
+            </div>
+            <div class="row" style="justify-content: flex-end; margin-top: 2px;">
+              <span id="status-char-count" class="hint" style="font-size: 10px;">0/32</span>
             </div>
           </div>
 
@@ -441,29 +427,37 @@
             </div>
             <p class="hint">This message will be sent with your invite response.</p>
             <div style="margin-top: 12px;">
-              <div class="row" style="gap: 8px; margin-top: 0; margin-bottom: 8px;">
-                <select id="invite-message-type" style="width: 110px; background: var(--color-input-bg); border: 1px solid var(--color-border); color: var(--color-text); border-radius: 8px; padding: 8px; box-sizing: border-box; flex-shrink: 0;">
-                  <option value="message">Invite</option>
-                  <option value="response">Response</option>
-                  <option value="request">Request</option>
-                  <option value="requestResponse">Req. Resp.</option>
-                </select>
-                <select id="invite-message-slot" style="width: 75px; background: var(--color-input-bg); border: 1px solid var(--color-border); color: var(--color-text); border-radius: 8px; padding: 8px; box-sizing: border-box; flex-shrink: 0;">
-                  <option value="0">Slot 1</option>
-                  <option value="1">Slot 2</option>
-                  <option value="2">Slot 3</option>
-                  <option value="3">Slot 4</option>
-                  <option value="4">Slot 5</option>
-                  <option value="5">Slot 6</option>
-                  <option value="6">Slot 7</option>
-                  <option value="7">Slot 8</option>
-                  <option value="8">Slot 9</option>
-                  <option value="9">Slot 10</option>
-                  <option value="10">Slot 11</option>
-                  <option value="11">Slot 12</option>
-                </select>
+              <div class="row space" style="margin-top: 0; margin-bottom: 8px; align-items: center;">
+                <div class="row" style="gap: 8px; margin: 0;">
+                  <select id="invite-message-type" style="width: 110px; background: var(--color-input-bg); border: 1px solid var(--color-border); color: var(--color-text); border-radius: 8px; padding: 8px; box-sizing: border-box; flex-shrink: 0;">
+                    <option value="message">Invite</option>
+                    <option value="response">Response</option>
+                    <option value="request">Request</option>
+                    <option value="requestResponse">Req. Resp.</option>
+                  </select>
+                  <select id="invite-message-slot" style="width: 75px; background: var(--color-input-bg); border: 1px solid var(--color-border); color: var(--color-text); border-radius: 8px; padding: 8px; box-sizing: border-box; flex-shrink: 0;">
+                    <option value="0">Slot 1</option>
+                    <option value="1">Slot 2</option>
+                    <option value="2">Slot 3</option>
+                    <option value="3">Slot 4</option>
+                    <option value="4">Slot 5</option>
+                    <option value="5">Slot 6</option>
+                    <option value="6">Slot 7</option>
+                    <option value="7">Slot 8</option>
+                    <option value="8">Slot 9</option>
+                    <option value="9">Slot 10</option>
+                    <option value="10">Slot 11</option>
+                    <option value="11">Slot 12</option>
+                  </select>
+                </div>
+                <button id="apply-slot" class="secondary" style="margin: 0; padding: 4px 12px; font-size: 11px; height: 28px;">Apply</button>
               </div>
-              <textarea id="invite-slot-preview" readonly style="margin: 0; width: 100%; min-height: 52px; height: 52px; background: var(--color-input-bg); color: var(--color-muted); cursor: default; user-select: none; pointer-events: none; resize: none;"></textarea>
+              <div class="row" style="margin-top: 8px;">
+                <textarea id="invite-slot-preview" style="margin: 0; flex: 1; min-height: 52px; height: 52px; background: var(--color-input-bg); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 8px; padding: 8px; box-sizing: border-box; resize: none;"></textarea>
+              </div>
+              <div class="row" style="justify-content: flex-end; margin-top: 2px;">
+                <span id="invite-char-count" class="hint" style="font-size: 10px;">0/64</span>
+              </div>
             </div>
           </div>
         </div>

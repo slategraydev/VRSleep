@@ -6,4 +6,8 @@ yarn-debug.log*
 yarn-error.log*
 .env
 .env.*
+settings.json
+whitelist.json
+message-slots.json
+auth.json
 .github/copilot-instructions.md

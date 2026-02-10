@@ -27,22 +27,10 @@ const friendsSave = document.getElementById("friends-save");
 const friendsClose = document.getElementById("friends-close");
 const tabWhitelist = document.getElementById("tab-whitelist");
 const tabCustomizations = document.getElementById("tab-customizations");
-const tabSlots = document.getElementById("tab-slots");
 const tabActivity = document.getElementById("tab-activity");
 const contentWhitelist = document.getElementById("content-whitelist");
 const contentCustomizations = document.getElementById("content-customizations");
-const contentSlots = document.getElementById("content-slots");
 const contentActivity = document.getElementById("content-activity");
-
-const slotsList = document.getElementById("slots-list");
-const slotsStatus = document.getElementById("slots-status");
-
-const subtabResponse = document.getElementById("subtab-response");
-const subtabRequest = document.getElementById("subtab-request");
-const subtabRequestResponse = document.getElementById("subtab-requestResponse");
-const subtabInvite = document.getElementById("subtab-invite");
-
-let activeSlotType = "response";
 
 const autoStatusToggle = document.getElementById("auto-status-toggle");
 const sleepStatus = document.getElementById("sleep-status");
@@ -55,6 +43,8 @@ const inviteSlotPreview = document.getElementById("invite-slot-preview");
 const inviteMessageToggle = document.getElementById("invite-message-toggle");
 const inviteMessageType = document.getElementById("invite-message-type");
 const statusCharCount = document.getElementById("status-char-count");
+const inviteCharCount = document.getElementById("invite-char-count");
+const applySlotButton = document.getElementById("apply-slot");
 
 let twoFactorType = "totp";
 let twoFactorMethods = [];
@@ -204,39 +194,21 @@ whitelistInput.addEventListener("input", () => {
 tabWhitelist.addEventListener("click", () => {
   tabWhitelist.classList.add("active");
   tabCustomizations.classList.remove("active");
-  tabSlots.classList.remove("active");
   tabActivity.classList.remove("active");
   contentWhitelist.classList.add("active");
   contentCustomizations.classList.remove("active");
-  contentSlots.classList.remove("active");
   contentActivity.classList.remove("active");
 });
 
 tabCustomizations.addEventListener("click", () => {
   tabCustomizations.classList.add("active");
   tabWhitelist.classList.remove("active");
-  tabSlots.classList.remove("active");
   tabActivity.classList.remove("active");
   contentCustomizations.classList.add("active");
   contentWhitelist.classList.remove("active");
-  contentSlots.classList.remove("active");
   contentActivity.classList.remove("active");
   if (currentUser) {
     fetchSlots();
-  }
-});
-
-tabSlots.addEventListener("click", () => {
-  tabSlots.classList.add("active");
-  tabWhitelist.classList.remove("active");
-  tabCustomizations.classList.remove("active");
-  tabActivity.classList.remove("active");
-  contentSlots.classList.add("active");
-  contentWhitelist.classList.remove("active");
-  contentCustomizations.classList.remove("active");
-  contentActivity.classList.remove("active");
-  if (currentUser) {
-    renderSlotManager();
   }
 });
 
@@ -244,27 +216,9 @@ tabActivity.addEventListener("click", () => {
   tabActivity.classList.add("active");
   tabWhitelist.classList.remove("active");
   tabCustomizations.classList.remove("active");
-  tabSlots.classList.remove("active");
   contentActivity.classList.add("active");
   contentWhitelist.classList.remove("active");
   contentCustomizations.classList.remove("active");
-  contentSlots.classList.remove("active");
-});
-
-const subtabs = [
-  { el: subtabInvite, type: "message" },
-  { el: subtabResponse, type: "response" },
-  { el: subtabRequest, type: "request" },
-  { el: subtabRequestResponse, type: "requestResponse" },
-];
-
-subtabs.forEach((tab) => {
-  tab.el.addEventListener("click", () => {
-    subtabs.forEach((t) => t.el.classList.remove("active"));
-    tab.el.classList.add("active");
-    activeSlotType = tab.type;
-    renderSlotManager();
-  });
 });
 
 const STATUS_COLORS = {
@@ -340,6 +294,44 @@ inviteMessageType.addEventListener("change", () => {
 inviteMessageSlot.addEventListener("change", () => {
   updateSlotPreviews();
   scheduleSettingsSave();
+});
+
+inviteSlotPreview.addEventListener("input", () => {
+  const len = inviteSlotPreview.value.length;
+  inviteCharCount.textContent = `${len}/64`;
+  inviteCharCount.style.color = len >= 64 ? "#f87171" : "var(--color-muted)";
+});
+
+applySlotButton.addEventListener("click", async () => {
+  const type = inviteMessageType.value;
+  const slot = Number(inviteMessageSlot.value);
+  const message = inviteSlotPreview.value;
+
+  applySlotButton.disabled = true;
+  applySlotButton.textContent = "...";
+
+  try {
+    const result = await window.sleepchat.updateMessageSlot(
+      type,
+      slot,
+      message,
+    );
+    if (!result.ok) throw new Error(result.error);
+
+    // Update local cache
+    if (cachedSlotsData[type] && cachedSlotsData[type][slot]) {
+      cachedSlotsData[type][slot].message = message;
+    } else if (cachedSlotsData[type]) {
+      cachedSlotsData[type][slot] = { slot, message };
+    }
+
+    appendLog(`Updated ${type} Slot ${slot + 1}`);
+  } catch (error) {
+    appendLog(`Failed to update slot: ${error.message}`);
+  } finally {
+    applySlotButton.disabled = false;
+    applySlotButton.textContent = "Apply";
+  }
 });
 
 loginButton.addEventListener("click", async () => {
@@ -624,94 +616,6 @@ async function loadSettings() {
   updateAutoStatusUI();
 }
 
-async function renderSlotManager() {
-  slotsList.innerHTML =
-    '<div class="hint" style="padding: 20px; text-align: center;">Loading slots...</div>';
-  slotsStatus.textContent = "Loading...";
-  slotsStatus.className = "status saving";
-
-  try {
-    const result = await window.sleepchat.getMessageSlots(activeSlotType);
-    if (!result.ok) throw new Error(result.error);
-
-    slotsList.innerHTML = "";
-    result.messages.forEach((msg, i) => {
-      const row = document.createElement("div");
-      row.className = "row";
-      row.style.gap = "8px";
-      row.style.alignItems = "center";
-
-      const label = document.createElement("span");
-      label.className = "hint";
-      label.style.width = "40px";
-      label.textContent = `Slot ${i + 1}`;
-
-      const input = document.createElement("input");
-      const messageText = typeof msg.message === "string" ? msg.message : "";
-      input.value = messageText;
-      input.style.margin = "0";
-      input.style.flex = "1";
-      input.placeholder = "Empty";
-      input.maxLength = 64;
-
-      const charCount = document.createElement("span");
-      charCount.className = "hint";
-      charCount.style.width = "30px";
-      charCount.style.textAlign = "right";
-      charCount.style.fontSize = "10px";
-
-      const updateCount = () => {
-        const len = input.value.length;
-        charCount.textContent = `${len}/64`;
-        charCount.style.color = len >= 64 ? "#f87171" : "var(--color-muted)";
-      };
-      input.addEventListener("input", updateCount);
-      updateCount();
-
-      const saveBtn = document.createElement("button");
-      saveBtn.className = "ghost";
-      saveBtn.style.margin = "0";
-      saveBtn.style.padding = "4px 8px";
-      saveBtn.style.fontSize = "11px";
-      saveBtn.textContent = "Save";
-
-      saveBtn.onclick = async () => {
-        saveBtn.disabled = true;
-        saveBtn.textContent = "...";
-        try {
-          const updateResult = await window.sleepchat.updateMessageSlot(
-            activeSlotType,
-            i,
-            input.value,
-          );
-          if (!updateResult.ok) throw new Error(updateResult.error);
-          appendLog(`Updated ${activeSlotType} Slot ${i + 1}`);
-          // Refresh customizations slots previews
-          fetchSlots();
-        } catch (error) {
-          appendLog(`Failed to update slot: ${error.message}`);
-        } finally {
-          saveBtn.disabled = false;
-          saveBtn.textContent = "Save";
-        }
-      };
-
-      row.appendChild(label);
-      row.appendChild(input);
-      row.appendChild(charCount);
-      row.appendChild(saveBtn);
-      slotsList.appendChild(row);
-    });
-
-    slotsStatus.textContent = "Ready";
-    slotsStatus.className = "status saved";
-  } catch (error) {
-    slotsList.innerHTML = `<div class="status-text error" style="padding: 20px; text-align: center;">${error.message}</div>`;
-    slotsStatus.textContent = "Error";
-    slotsStatus.className = "status error";
-  }
-}
-
 let cachedSlotsData = {
   message: [],
   response: [],
@@ -752,6 +656,11 @@ function updateSlotPreviews() {
   } else {
     inviteSlotPreview.value = "";
   }
+
+  // Update character count
+  const len = inviteSlotPreview.value.length;
+  inviteCharCount.textContent = `${len}/64`;
+  inviteCharCount.style.color = len >= 64 ? "#f87171" : "var(--color-muted)";
 }
 
 (async () => {
