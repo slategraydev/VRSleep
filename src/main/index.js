@@ -1,4 +1,9 @@
 const { app, BrowserWindow } = require("electron");
+
+try {
+  require("electron-reloader")(module);
+} catch (_) {}
+
 const { getWhitelist, setWhitelist } = require("../stores/whitelist-store");
 const { getSettings, setSettings } = require("../stores/settings-store");
 const {

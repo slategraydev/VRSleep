@@ -108,7 +108,18 @@ function createSleepMode({
 
       try {
         const settings = getSettings();
-        await sendInvite(senderIdRaw);
+
+        const isInviteMessageEnabled = !!settings.inviteMessageEnabled;
+
+        const messageSlot =
+          isInviteMessageEnabled && settings.inviteMessageSlot !== undefined
+            ? settings.inviteMessageSlot
+            : null;
+
+        const messageType = settings.inviteMessageType || "message";
+
+        await sendInvite(senderIdRaw, "", messageSlot, messageType);
+
         handledSenderIds.add(senderIdRaw);
         if (inviteId) handledInviteIds.add(inviteId);
         log(`Sent invite to ${displayName}`);
@@ -146,6 +157,8 @@ function createSleepMode({
     if (!sleepMode || !isReadyForApi()) return;
 
     const settings = getSettings();
+    const isAutoStatusEnabled = !!settings.autoStatusEnabled;
+
     const hasStatusType =
       settings.sleepStatus && settings.sleepStatus !== "none";
     let targetDescription =
@@ -154,26 +167,10 @@ function createSleepMode({
         ? settings.sleepStatusDescription.trim()
         : null;
 
-    // "Weird workaround": if description is empty and a slot is chosen, fetch the slot content
-    if (
-      !targetDescription &&
-      settings.statusMessageSlot !== undefined &&
-      settings.statusMessageSlot !== null
-    ) {
-      try {
-        const slots = await getMessageSlots("requestResponse"); // Using 'requestResponse' type for status workaround
-        if (slots && slots[settings.statusMessageSlot]) {
-          targetDescription = slots[settings.statusMessageSlot].message;
-        }
-      } catch (error) {
-        log(`Failed to fetch status slot: ${error.message}`);
-      }
-    }
-
     const hasDescription = targetDescription !== null;
 
     // If we are turning ON any custom status feature, capture pre-sleep status if we haven't yet
-    if (hasStatusType || hasDescription) {
+    if (isAutoStatusEnabled && (hasStatusType || hasDescription)) {
       try {
         const user = await getCurrentUser();
 

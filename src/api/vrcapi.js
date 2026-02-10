@@ -42,7 +42,12 @@ async function fetchInvites() {
   return invites;
 }
 
-async function sendInvite(userId, message = "", messageSlot = null) {
+async function sendInvite(
+  userId,
+  message = "",
+  messageSlot = null,
+  messageType = "message",
+) {
   if (!userId) throw new Error("Missing user id");
 
   // Get current user location
@@ -85,6 +90,7 @@ async function sendInvite(userId, message = "", messageSlot = null) {
     body.message = message.trim();
   } else if (messageSlot !== null && messageSlot !== undefined) {
     body.messageSlot = Number(messageSlot);
+    body.messageType = messageType;
   }
 
   const response = await fetch(url, {

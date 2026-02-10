@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld("sleepchat", {
   logout: () => ipcRenderer.invoke("auth:logout"),
   downloadUpdate: () => ipcRenderer.invoke("update:download"),
   getFriends: () => ipcRenderer.invoke("friends:get"),
+  getCachedMessageSlots: () => ipcRenderer.invoke("messages:get-cached"),
   getMessageSlots: (type) => ipcRenderer.invoke("messages:get-all", type),
   updateMessageSlot: (type, slot, message) =>
     ipcRenderer.invoke("messages:update-slot", { type, slot, message }),

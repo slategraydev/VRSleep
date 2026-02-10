@@ -7,7 +7,10 @@ const FILE_NAME = "settings.json";
 const DEFAULT_SETTINGS = {
   sleepStatus: "none",
   sleepStatusDescription: "",
-  statusMessageSlot: 0,
+  inviteMessageSlot: 0,
+  inviteMessageType: "message",
+  autoStatusEnabled: false,
+  inviteMessageEnabled: false,
 };
 
 function getFilePath() {

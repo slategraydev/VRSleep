@@ -80,6 +80,11 @@ function registerIpcHandlers({
     }
   });
 
+  ipcMain.handle("messages:get-cached", () => {
+    const { getCachedSlots } = require("../stores/message-slots-store");
+    return getCachedSlots();
+  });
+
   ipcMain.handle("messages:get-all", async (_event, type) => {
     try {
       const authStatus = auth.getStatus();
@@ -87,7 +92,18 @@ function registerIpcHandlers({
         throw new Error("Not authenticated");
       }
       const { getMessageSlots } = require("../api/vrcapi");
+      const {
+        saveCachedSlots,
+        getCachedSlots,
+      } = require("../stores/message-slots-store");
+
       const result = await getMessageSlots(authStatus.userId, type);
+
+      // Update cache
+      const cache = getCachedSlots();
+      cache[type] = result.map((r) => r.message);
+      saveCachedSlots(cache);
+
       return { ok: true, messages: result };
     } catch (error) {
       return { ok: false, error: error.message };
@@ -103,12 +119,18 @@ function registerIpcHandlers({
           throw new Error("Not authenticated");
         }
         const { updateMessageSlot } = require("../api/vrcapi");
+        const { updateCachedSlot } = require("../stores/message-slots-store");
+
         const result = await updateMessageSlot(
           authStatus.userId,
           type,
           slot,
           message,
         );
+
+        // Update cache
+        updateCachedSlot(type, slot, message);
+
         return { ok: true, result };
       } catch (error) {
         return { ok: false, error: error.message };

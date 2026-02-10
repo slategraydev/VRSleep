@@ -40,16 +40,21 @@ const slotsStatus = document.getElementById("slots-status");
 const subtabResponse = document.getElementById("subtab-response");
 const subtabRequest = document.getElementById("subtab-request");
 const subtabRequestResponse = document.getElementById("subtab-requestResponse");
+const subtabInvite = document.getElementById("subtab-invite");
 
 let activeSlotType = "response";
 
-const autoStatusBadge = document.getElementById("auto-status-badge");
+const autoStatusToggle = document.getElementById("auto-status-toggle");
 const sleepStatus = document.getElementById("sleep-status");
 const sleepStatusDescription = document.getElementById(
   "sleep-status-description",
 );
-const statusMessageSlot = document.getElementById("status-message-slot");
-const statusSlotPreview = document.getElementById("status-slot-preview");
+
+const inviteMessageSlot = document.getElementById("invite-message-slot");
+const inviteSlotPreview = document.getElementById("invite-slot-preview");
+const inviteMessageToggle = document.getElementById("invite-message-toggle");
+const inviteMessageType = document.getElementById("invite-message-type");
+const statusCharCount = document.getElementById("status-char-count");
 
 let twoFactorType = "totp";
 let twoFactorMethods = [];
@@ -59,8 +64,6 @@ let saveTimer = null;
 let settingsTimer = null;
 let allFriends = [];
 let selectedFriends = new Set();
-
-let responseSlotsData = [];
 
 function showView(view) {
   loginView.classList.remove("active");
@@ -249,6 +252,7 @@ tabActivity.addEventListener("click", () => {
 });
 
 const subtabs = [
+  { el: subtabInvite, type: "message" },
   { el: subtabResponse, type: "response" },
   { el: subtabRequest, type: "request" },
   { el: subtabRequestResponse, type: "requestResponse" },
@@ -263,15 +267,6 @@ subtabs.forEach((tab) => {
   });
 });
 
-let isAutoStatusEnabled = false;
-
-function updateAutoStatusUI(enabled) {
-  isAutoStatusEnabled = enabled;
-  autoStatusBadge.textContent = enabled ? "Enabled" : "Disabled";
-  autoStatusBadge.className = enabled ? "status on" : "status off";
-  autoStatusToggle.className = enabled ? "secondary" : "primary";
-}
-
 const STATUS_COLORS = {
   none: "#9ca3af",
   "join me": "#42CAFF",
@@ -280,13 +275,17 @@ const STATUS_COLORS = {
   busy: "#C93131",
 };
 
-function updateAutoStatusUI() {
-  const hasStatus = sleepStatus.value !== "none";
-  const hasMessage = sleepStatusDescription.value.trim() !== "";
-  const enabled = hasStatus || hasMessage;
+let autoStatusEnabled = false;
+let inviteMessageEnabled = false;
 
-  autoStatusBadge.textContent = enabled ? "Enabled" : "Disabled";
-  autoStatusBadge.className = enabled ? "status on" : "status off";
+function updateAutoStatusUI() {
+  autoStatusToggle.checked = autoStatusEnabled;
+  inviteMessageToggle.checked = inviteMessageEnabled;
+  sleepStatusDescription.maxLength = 32;
+
+  const len = sleepStatusDescription.value.length;
+  statusCharCount.textContent = `${len}/32`;
+  statusCharCount.style.color = len >= 32 ? "#f87171" : "var(--color-muted)";
 
   // Update dropdown text color to match selected status
   sleepStatus.style.color = STATUS_COLORS[sleepStatus.value] || "#e3e5e8";
@@ -296,7 +295,10 @@ async function saveSettings() {
   const settings = {
     sleepStatus: sleepStatus.value || "none",
     sleepStatusDescription: sleepStatusDescription.value || "",
-    statusMessageSlot: Number(statusMessageSlot.value) || 0,
+    inviteMessageSlot: Number(inviteMessageSlot.value) || 0,
+    inviteMessageType: inviteMessageType.value || "message",
+    autoStatusEnabled,
+    inviteMessageEnabled,
   };
   await window.sleepchat.setSettings(settings);
 }
@@ -308,16 +310,34 @@ function scheduleSettingsSave() {
   }, 1000);
 }
 
+autoStatusToggle.addEventListener("change", () => {
+  autoStatusEnabled = autoStatusToggle.checked;
+  updateAutoStatusUI();
+  scheduleSettingsSave();
+});
+
+inviteMessageToggle.addEventListener("change", () => {
+  inviteMessageEnabled = inviteMessageToggle.checked;
+  updateAutoStatusUI();
+  scheduleSettingsSave();
+});
+
 sleepStatus.addEventListener("change", () => {
   updateAutoStatusUI();
   scheduleSettingsSave();
 });
 
 sleepStatusDescription.addEventListener("input", () => {
+  updateAutoStatusUI();
   scheduleSettingsSave();
 });
 
-statusMessageSlot.addEventListener("change", () => {
+inviteMessageType.addEventListener("change", () => {
+  updateSlotPreviews();
+  scheduleSettingsSave();
+});
+
+inviteMessageSlot.addEventListener("change", () => {
   updateSlotPreviews();
   scheduleSettingsSave();
 });
@@ -591,10 +611,16 @@ async function loadSettings() {
     typeof settings.sleepStatusDescription === "string"
       ? settings.sleepStatusDescription
       : "";
-  statusMessageSlot.value =
-    typeof settings.statusMessageSlot === "number"
-      ? settings.statusMessageSlot
+  inviteMessageSlot.value =
+    typeof settings.inviteMessageSlot === "number"
+      ? settings.inviteMessageSlot
       : 0;
+  inviteMessageType.value =
+    typeof settings.inviteMessageType === "string"
+      ? settings.inviteMessageType
+      : "message";
+  autoStatusEnabled = !!settings.autoStatusEnabled;
+  inviteMessageEnabled = !!settings.inviteMessageEnabled;
   updateAutoStatusUI();
 }
 
@@ -617,8 +643,8 @@ async function renderSlotManager() {
 
       const label = document.createElement("span");
       label.className = "hint";
-      label.style.width = "45px";
-      label.textContent = `Slot ${i + 1}:`;
+      label.style.width = "40px";
+      label.textContent = `Slot ${i + 1}`;
 
       const input = document.createElement("input");
       const messageText = typeof msg.message === "string" ? msg.message : "";
@@ -626,6 +652,21 @@ async function renderSlotManager() {
       input.style.margin = "0";
       input.style.flex = "1";
       input.placeholder = "Empty";
+      input.maxLength = 64;
+
+      const charCount = document.createElement("span");
+      charCount.className = "hint";
+      charCount.style.width = "30px";
+      charCount.style.textAlign = "right";
+      charCount.style.fontSize = "10px";
+
+      const updateCount = () => {
+        const len = input.value.length;
+        charCount.textContent = `${len}/64`;
+        charCount.style.color = len >= 64 ? "#f87171" : "var(--color-muted)";
+      };
+      input.addEventListener("input", updateCount);
+      updateCount();
 
       const saveBtn = document.createElement("button");
       saveBtn.className = "ghost";
@@ -645,10 +686,8 @@ async function renderSlotManager() {
           );
           if (!updateResult.ok) throw new Error(updateResult.error);
           appendLog(`Updated ${activeSlotType} Slot ${i + 1}`);
-          // If we updated the active customizations slots, refresh them
-          if (activeSlotType === "requestResponse") {
-            fetchSlots();
-          }
+          // Refresh customizations slots previews
+          fetchSlots();
         } catch (error) {
           appendLog(`Failed to update slot: ${error.message}`);
         } finally {
@@ -659,6 +698,7 @@ async function renderSlotManager() {
 
       row.appendChild(label);
       row.appendChild(input);
+      row.appendChild(charCount);
       row.appendChild(saveBtn);
       slotsList.appendChild(row);
     });
@@ -672,20 +712,29 @@ async function renderSlotManager() {
   }
 }
 
+let cachedSlotsData = {
+  message: [],
+  response: [],
+  request: [],
+  requestResponse: [],
+};
+
 async function fetchSlots() {
   console.log("Fetching message slots...");
   try {
-    const responseResult =
-      await window.sleepchat.getMessageSlots("requestResponse");
-    console.log("Response slots result:", responseResult);
-    if (responseResult.ok && Array.isArray(responseResult.messages)) {
-      responseSlotsData = responseResult.messages;
-      responseSlotsData.forEach((msg, i) => {
-        if (i < 12 && statusMessageSlot.options[i]) {
-          statusMessageSlot.options[i].textContent = `Slot ${i + 1}`;
-        }
-      });
-    }
+    // Initial fetch of everything
+    const types = ["message", "response", "request", "requestResponse"];
+    const results = await Promise.all(
+      types.map((type) => window.sleepchat.getMessageSlots(type)),
+    );
+
+    types.forEach((type, index) => {
+      const result = results[index];
+      if (result.ok && Array.isArray(result.messages)) {
+        cachedSlotsData[type] = result.messages;
+      }
+    });
+
     updateSlotPreviews();
   } catch (error) {
     console.error("Failed to fetch slots:", error);
@@ -693,18 +742,15 @@ async function fetchSlots() {
 }
 
 function updateSlotPreviews() {
-  const statusIdx = Number(statusMessageSlot.value);
-  if (responseSlotsData[statusIdx]) {
-    const slotData = responseSlotsData[statusIdx];
-    let msg = "";
-    if (slotData && typeof slotData.message === "string") {
-      msg = slotData.message;
-    } else if (slotData && typeof slotData === "string") {
-      msg = slotData;
-    }
-    statusSlotPreview.value = typeof msg === "string" ? msg : "";
+  const type = inviteMessageType.value;
+  const inviteIdx = Number(inviteMessageSlot.value);
+
+  if (cachedSlotsData[type] && cachedSlotsData[type][inviteIdx]) {
+    const slotData = cachedSlotsData[type][inviteIdx];
+    inviteSlotPreview.value =
+      typeof slotData.message === "string" ? slotData.message : "";
   } else {
-    statusSlotPreview.value = "";
+    inviteSlotPreview.value = "";
   }
 }
 
