@@ -108,7 +108,11 @@ function registerIpcHandlers({
     const isSignificantChange = Math.abs(currentRemainingMins - apiMins) > 1;
     const isNewCooldown = currentRemainingMins === 0 && apiMins > 0;
 
-    if (isSignificantChange || isNewCooldown) {
+    if (
+      isSignificantChange ||
+      isNewCooldown ||
+      (apiMins > 0 && currentUnlockTime === 0)
+    ) {
       const unlockTime = apiMins > 0 ? Date.now() + apiMins * 60000 : 0;
       messageSlotsStore.updateSlotCooldown(type, slot, unlockTime);
     }
@@ -197,6 +201,22 @@ function registerIpcHandlers({
         return { ok: true, result };
       } catch (error) {
         console.error(`Error in messages:update-slot:`, error);
+
+        // If we get a 429, we KNOW the slot is locked.
+        if (error.status === 429) {
+          let mins = 60;
+          // Try to extract "wait X more minutes" from the API message
+          const match = error.message.match(/wait (\d+) more minutes/i);
+          if (match) {
+            mins = parseInt(match[1], 10) + 1;
+          }
+          messageSlotsStore.updateSlotCooldown(
+            type,
+            slot,
+            Date.now() + mins * 60000,
+          );
+        }
+
         return { ok: false, error: error.message };
       }
     },
