@@ -1,16 +1,17 @@
-const { app } = require('electron');
-const fs = require('fs');
-const path = require('path');
+const { app } = require("electron");
+const fs = require("fs");
+const path = require("path");
 
-const FILE_NAME = 'settings.json';
+const FILE_NAME = "settings.json";
 
 const DEFAULT_SETTINGS = {
-  sleepStatus: 'none',
-  sleepStatusDescription: ''
+  sleepStatus: "none",
+  sleepStatusDescription: "",
+  statusMessageSlot: 0,
 };
 
 function getFilePath() {
-  const folder = app.getPath('userData');
+  const folder = app.getPath("userData");
   return path.join(folder, FILE_NAME);
 }
 
@@ -18,7 +19,7 @@ function getSettings() {
   const filePath = getFilePath();
   if (!fs.existsSync(filePath)) return { ...DEFAULT_SETTINGS };
   try {
-    const raw = fs.readFileSync(filePath, 'utf8');
+    const raw = fs.readFileSync(filePath, "utf8");
     const data = JSON.parse(raw);
     return { ...DEFAULT_SETTINGS, ...data };
   } catch {
@@ -36,5 +37,5 @@ function setSettings(settings) {
 
 module.exports = {
   getSettings,
-  setSettings
+  setSettings,
 };

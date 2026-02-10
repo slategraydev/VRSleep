@@ -6,10 +6,11 @@ function createSleepMode({
   isReadyForApi,
   getCurrentUser,
   updateStatus,
+  getMessageSlots,
   getSettings,
   log,
   pollIntervalMs,
-  minPollMs
+  minPollMs,
 }) {
   let sleepMode = false;
   let pollTimer = null;
@@ -26,7 +27,9 @@ function createSleepMode({
   }
 
   function normalizeEntry(entry) {
-    return String(entry || '').trim().toLowerCase();
+    return String(entry || "")
+      .trim()
+      .toLowerCase();
   }
 
   async function checkInvites() {
@@ -37,11 +40,13 @@ function createSleepMode({
     if (setSleepStatus !== null) {
       try {
         const user = await getCurrentUser();
-        const statusChanged = user.status !== setSleepStatus || user.statusDescription !== setSleepDescription;
+        const statusChanged =
+          user.status !== setSleepStatus ||
+          user.statusDescription !== setSleepDescription;
         if (statusChanged) {
           preSleepStatus = {
             status: user.status,
-            statusDescription: user.statusDescription
+            statusDescription: user.statusDescription,
           };
           setSleepStatus = user.status;
           setSleepDescription = user.statusDescription;
@@ -61,15 +66,19 @@ function createSleepMode({
     if (!Array.isArray(invites) || invites.length === 0) return;
 
     const whitelist = getWhitelist().map(normalizeEntry).filter(Boolean);
-    
+
     for (const invite of invites) {
       if (!invite) continue;
       const inviteId = invite.id || invite.notificationId || invite._id;
-      
-      const senderIdRaw = invite.senderId || invite.senderUserId || invite.userId;
+
+      const senderIdRaw =
+        invite.senderId || invite.senderUserId || invite.userId;
       const senderIdNorm = normalizeEntry(senderIdRaw);
-      const senderName = normalizeEntry(invite.senderDisplayName || invite.senderUsername || invite.displayName);
-      const displayName = invite.senderDisplayName || invite.senderUsername || senderIdRaw;
+      const senderName = normalizeEntry(
+        invite.senderDisplayName || invite.senderUsername || invite.displayName,
+      );
+      const displayName =
+        invite.senderDisplayName || invite.senderUsername || senderIdRaw;
 
       // Skip if we've already handled this sender in this session
       if (handledSenderIds.has(senderIdRaw)) {
@@ -85,8 +94,9 @@ function createSleepMode({
       if (inviteId && handledInviteIds.has(inviteId)) {
         continue;
       }
-      
-      const matches = whitelist.includes(senderIdNorm) || whitelist.includes(senderName);
+
+      const matches =
+        whitelist.includes(senderIdNorm) || whitelist.includes(senderName);
       if (!matches) {
         try {
           if (inviteId) await deleteNotification(inviteId);
@@ -97,11 +107,12 @@ function createSleepMode({
       }
 
       try {
-        await sendInvite(senderIdRaw, inviteId);
+        const settings = getSettings();
+        await sendInvite(senderIdRaw);
         handledSenderIds.add(senderIdRaw);
         if (inviteId) handledInviteIds.add(inviteId);
         log(`Sent invite to ${displayName}`);
-        
+
         try {
           if (inviteId) await deleteNotification(inviteId);
         } catch (error) {
@@ -135,40 +146,78 @@ function createSleepMode({
     if (!sleepMode || !isReadyForApi()) return;
 
     const settings = getSettings();
-    const hasStatusType = settings.sleepStatus && settings.sleepStatus !== 'none';
-    const hasDescription = settings.sleepStatusDescription && settings.sleepStatusDescription.trim() !== '';
+    const hasStatusType =
+      settings.sleepStatus && settings.sleepStatus !== "none";
+    let targetDescription =
+      settings.sleepStatusDescription &&
+      settings.sleepStatusDescription.trim() !== ""
+        ? settings.sleepStatusDescription.trim()
+        : null;
+
+    // "Weird workaround": if description is empty and a slot is chosen, fetch the slot content
+    if (
+      !targetDescription &&
+      settings.statusMessageSlot !== undefined &&
+      settings.statusMessageSlot !== null
+    ) {
+      try {
+        const slots = await getMessageSlots("requestResponse"); // Using 'requestResponse' type for status workaround
+        if (slots && slots[settings.statusMessageSlot]) {
+          targetDescription = slots[settings.statusMessageSlot].message;
+        }
+      } catch (error) {
+        log(`Failed to fetch status slot: ${error.message}`);
+      }
+    }
+
+    const hasDescription = targetDescription !== null;
 
     // If we are turning ON any custom status feature, capture pre-sleep status if we haven't yet
     if (hasStatusType || hasDescription) {
       try {
         const user = await getCurrentUser();
-        
+
         if (!preSleepStatus) {
           preSleepStatus = {
             status: user.status,
-            statusDescription: user.statusDescription
+            statusDescription: user.statusDescription,
           };
         }
-        
+
         // Use custom values if provided, otherwise fall back to pre-sleep values
-        const targetStatus = hasStatusType ? settings.sleepStatus : preSleepStatus.status;
-        const targetDescription = hasDescription ? settings.sleepStatusDescription.trim() : preSleepStatus.statusDescription;
-        
-        const updatedUser = await updateStatus(user.id, targetStatus, targetDescription);
-        
+        const targetStatus = hasStatusType
+          ? settings.sleepStatus
+          : preSleepStatus.status;
+
+        const finalDescription = hasDescription
+          ? targetDescription
+          : preSleepStatus.statusDescription;
+
+        const updatedUser = await updateStatus(
+          user.id,
+          targetStatus,
+          finalDescription,
+        );
+
         setSleepStatus = updatedUser.status;
         setSleepDescription = updatedUser.statusDescription;
-        
-        log(`Status updated to: ${setSleepStatus} (${setSleepDescription || 'no message'})`);
+
+        log(
+          `Status updated to: ${setSleepStatus} (${setSleepDescription || "no message"})`,
+        );
       } catch (error) {
         log(`Failed to update status: ${error.message}`);
       }
     } else if (preSleepStatus) {
       // Both are 'None'/blank, so we revert everything back to original
       try {
-        log('Custom status cleared. Restoring pre-sleep status.');
+        log("Custom status cleared. Restoring pre-sleep status.");
         const user = await getCurrentUser();
-        await updateStatus(user.id, preSleepStatus.status, preSleepStatus.statusDescription);
+        await updateStatus(
+          user.id,
+          preSleepStatus.status,
+          preSleepStatus.statusDescription,
+        );
         preSleepStatus = null;
         setSleepStatus = null;
         setSleepDescription = null;
@@ -182,7 +231,7 @@ function createSleepMode({
     try {
       sleepMode = true;
       startPolling();
-      log('Sleep mode enabled.');
+      log("Sleep mode enabled.");
       await refreshStatus();
     } catch (error) {
       log(`Error: ${error.message}`);
@@ -195,8 +244,8 @@ function createSleepMode({
     try {
       sleepMode = false;
       stopPolling();
-      log('Sleep mode disabled.');
-      
+      log("Sleep mode disabled.");
+
       // Clear handled IDs so we can respond to the same people if we restart sleep mode
       handledInviteIds.clear();
       handledSenderIds.clear();
@@ -204,17 +253,22 @@ function createSleepMode({
       if (preSleepStatus && isReadyForApi()) {
         try {
           const currentUserData = await getCurrentUser();
-          
+
           // Only restore if the user hasn't manually changed their status in-game
           // We check if the current status matches what we set it to
           const statusMatches = currentUserData.status === setSleepStatus;
-          const descriptionMatches = currentUserData.statusDescription === setSleepDescription;
+          const descriptionMatches =
+            currentUserData.statusDescription === setSleepDescription;
 
           if (statusMatches && descriptionMatches) {
             log(`Restoring pre-sleep status: ${preSleepStatus.status}`);
-            await updateStatus(currentUserData.id, preSleepStatus.status, preSleepStatus.statusDescription);
+            await updateStatus(
+              currentUserData.id,
+              preSleepStatus.status,
+              preSleepStatus.statusDescription,
+            );
           } else {
-            log('Status was changed manually in-game. Skipping restoration.');
+            log("Status was changed manually in-game. Skipping restoration.");
           }
         } catch (error) {
           log(`Failed to restore status: ${error.message}`);
@@ -239,10 +293,10 @@ function createSleepMode({
     start,
     stop,
     status,
-    refreshStatus
+    refreshStatus,
   };
 }
 
 module.exports = {
-  createSleepMode
+  createSleepMode,
 };

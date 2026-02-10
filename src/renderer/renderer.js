@@ -1,42 +1,57 @@
-const loginView = document.getElementById('login-view');
-const mainView = document.getElementById('main-view');
-const userHeader = document.getElementById('user-header');
-const whitelistInput = document.getElementById('whitelist');
-const toggleButton = document.getElementById('toggle');
-const statusBadge = document.getElementById('status');
-const logList = document.getElementById('log');
-const userDisplayName = document.getElementById('user-display-name');
-const authHint = document.getElementById('auth-hint');
-const whitelistStatus = document.getElementById('whitelist-status');
-const usernameInput = document.getElementById('username');
-const passwordInput = document.getElementById('password');
-const loginButton = document.getElementById('login');
-const logoutButton = document.getElementById('logout');
-const updateButton = document.getElementById('update-btn');
-const manageWhitelistButton = document.getElementById('manage-whitelist');
-const modal = document.getElementById('modal');
-const modalTitle = document.getElementById('modal-title');
-const modalHint = document.getElementById('modal-hint');
-const modalCode = document.getElementById('modal-code');
-const modalSubmit = document.getElementById('modal-submit');
-const modalToggle = document.getElementById('modal-toggle');
-const friendsModal = document.getElementById('friends-modal');
-const friendsSearch = document.getElementById('friends-search');
-const friendsList = document.getElementById('friends-list');
-const friendsSave = document.getElementById('friends-save');
-const friendsClose = document.getElementById('friends-close');
-const tabWhitelist = document.getElementById('tab-whitelist');
-const tabSettings = document.getElementById('tab-settings');
-const tabActivity = document.getElementById('tab-activity');
-const contentWhitelist = document.getElementById('content-whitelist');
-const contentSettings = document.getElementById('content-settings');
-const contentActivity = document.getElementById('content-activity');
+const loginView = document.getElementById("login-view");
+const mainView = document.getElementById("main-view");
+const userHeader = document.getElementById("user-header");
+const whitelistInput = document.getElementById("whitelist");
+const toggleButton = document.getElementById("toggle");
+const statusBadge = document.getElementById("status");
+const logList = document.getElementById("log");
+const userDisplayName = document.getElementById("user-display-name");
+const authHint = document.getElementById("auth-hint");
+const whitelistStatus = document.getElementById("whitelist-status");
+const usernameInput = document.getElementById("username");
+const passwordInput = document.getElementById("password");
+const loginButton = document.getElementById("login");
+const logoutButton = document.getElementById("logout");
+const updateButton = document.getElementById("update-btn");
+const manageWhitelistButton = document.getElementById("manage-whitelist");
+const modal = document.getElementById("modal");
+const modalTitle = document.getElementById("modal-title");
+const modalHint = document.getElementById("modal-hint");
+const modalCode = document.getElementById("modal-code");
+const modalSubmit = document.getElementById("modal-submit");
+const modalToggle = document.getElementById("modal-toggle");
+const friendsModal = document.getElementById("friends-modal");
+const friendsSearch = document.getElementById("friends-search");
+const friendsList = document.getElementById("friends-list");
+const friendsSave = document.getElementById("friends-save");
+const friendsClose = document.getElementById("friends-close");
+const tabWhitelist = document.getElementById("tab-whitelist");
+const tabCustomizations = document.getElementById("tab-customizations");
+const tabSlots = document.getElementById("tab-slots");
+const tabActivity = document.getElementById("tab-activity");
+const contentWhitelist = document.getElementById("content-whitelist");
+const contentCustomizations = document.getElementById("content-customizations");
+const contentSlots = document.getElementById("content-slots");
+const contentActivity = document.getElementById("content-activity");
 
-const autoStatusBadge = document.getElementById('auto-status-badge');
-const sleepStatus = document.getElementById('sleep-status');
-const sleepStatusDescription = document.getElementById('sleep-status-description');
+const slotsList = document.getElementById("slots-list");
+const slotsStatus = document.getElementById("slots-status");
 
-let twoFactorType = 'totp';
+const subtabResponse = document.getElementById("subtab-response");
+const subtabRequest = document.getElementById("subtab-request");
+const subtabRequestResponse = document.getElementById("subtab-requestResponse");
+
+let activeSlotType = "response";
+
+const autoStatusBadge = document.getElementById("auto-status-badge");
+const sleepStatus = document.getElementById("sleep-status");
+const sleepStatusDescription = document.getElementById(
+  "sleep-status-description",
+);
+const statusMessageSlot = document.getElementById("status-message-slot");
+const statusSlotPreview = document.getElementById("status-slot-preview");
+
+let twoFactorType = "totp";
 let twoFactorMethods = [];
 let currentUser = null;
 let whitelistDirty = false;
@@ -45,71 +60,78 @@ let settingsTimer = null;
 let allFriends = [];
 let selectedFriends = new Set();
 
+let responseSlotsData = [];
+
 function showView(view) {
-  loginView.classList.remove('active');
-  mainView.classList.remove('active');
-  view.classList.add('active');
+  loginView.classList.remove("active");
+  mainView.classList.remove("active");
+  view.classList.add("active");
 }
 
 function setStatus(enabled) {
-  statusBadge.textContent = enabled ? 'Enabled' : 'Disabled';
-  statusBadge.className = enabled ? 'status on' : 'status off';
-  toggleButton.textContent = enabled ? 'Disable Sleep Mode' : 'Enable Sleep Mode';
-  toggleButton.className = enabled ? 'secondary' : 'primary';
+  statusBadge.textContent = enabled ? "Enabled" : "Disabled";
+  statusBadge.className = enabled ? "status on" : "status off";
+  toggleButton.textContent = enabled
+    ? "Disable Sleep Mode"
+    : "Enable Sleep Mode";
+  toggleButton.className = enabled ? "secondary" : "primary";
 }
 
 function appendLog(message) {
-  const item = document.createElement('div');
-  item.className = 'log-item';
+  const item = document.createElement("div");
+  item.className = "log-item";
   const timestamp = new Date().toLocaleTimeString();
   item.textContent = `[${timestamp}] ${message}`;
   logList.prepend(item);
 }
 
-function setWhitelistStatus(text, state = 'saved') {
+function setWhitelistStatus(text, state = "saved") {
   whitelistStatus.textContent = text;
   whitelistStatus.className = `status ${state}`;
 }
 
 function setAuthHint(message, isError = false) {
-  authHint.textContent = message || '';
-  authHint.style.color = isError ? '#f87171' : '#9ca3af';
+  authHint.textContent = message || "";
+  authHint.style.color = isError ? "#f87171" : "#9ca3af";
 }
 
 function setUserInfo(user) {
   currentUser = user;
   if (user) {
-    userDisplayName.textContent = user.displayName || user.username || 'User';
-    
-    userHeader.style.display = 'flex';
+    userDisplayName.textContent = user.displayName || user.username || "User";
+
+    userHeader.style.display = "flex";
     showView(mainView);
   } else {
-    userHeader.style.display = 'none';
+    userHeader.style.display = "none";
     showView(loginView);
   }
 }
 
 function setModalState(visible) {
   if (visible) {
-    modal.classList.add('active');
+    modal.classList.add("active");
   } else {
-    modal.classList.remove('active');
+    modal.classList.remove("active");
   }
 }
 
 function updateModalCopy() {
-  if (twoFactorType === 'email') {
-    modalTitle.textContent = 'Email verification';
-    modalHint.textContent = 'Enter the 6-digit code sent to your email.';
-    modalToggle.textContent = 'Use backup code';
-  } else if (twoFactorType === 'otp') {
-    modalTitle.textContent = 'Backup code';
-    modalHint.textContent = 'Enter your recovery code (xxxx-xxxx).';
-    modalToggle.textContent = twoFactorMethods.includes('emailOtp') ? 'Use email code' : 'Use authenticator';
+  if (twoFactorType === "email") {
+    modalTitle.textContent = "Email verification";
+    modalHint.textContent = "Enter the 6-digit code sent to your email.";
+    modalToggle.textContent = "Use backup code";
+  } else if (twoFactorType === "otp") {
+    modalTitle.textContent = "Backup code";
+    modalHint.textContent = "Enter your recovery code (xxxx-xxxx).";
+    modalToggle.textContent = twoFactorMethods.includes("emailOtp")
+      ? "Use email code"
+      : "Use authenticator";
   } else {
-    modalTitle.textContent = 'Authenticator code';
-    modalHint.textContent = 'Enter the 6-digit code from your authenticator app.';
-    modalToggle.textContent = 'Use backup code';
+    modalTitle.textContent = "Authenticator code";
+    modalHint.textContent =
+      "Enter the 6-digit code from your authenticator app.";
+    modalToggle.textContent = "Use backup code";
   }
 }
 
@@ -123,29 +145,29 @@ async function refreshAuthStatus() {
       } else if (status.user) {
         setUserInfo(status.user);
       } else {
-        setUserInfo({ id: status.userId, displayName: 'Loading...' });
+        setUserInfo({ id: status.userId, displayName: "Loading..." });
       }
     } else {
       setUserInfo(null);
     }
   } catch (error) {
-    console.error('Failed to refresh status:', error);
+    console.error("Failed to refresh status:", error);
   }
 }
 
 async function loadWhitelist() {
   const list = await window.sleepchat.getWhitelist();
-  whitelistInput.value = list.join('\n');
+  whitelistInput.value = list.join("\n");
   whitelistDirty = false;
-  setWhitelistStatus('Saved');
+  setWhitelistStatus("Saved");
   if (list.length > 0) {
-    appendLog(`Whitelist: ${list.join(', ')}`);
+    appendLog(`Whitelist: ${list.join(", ")}`);
   }
 }
 
 function parseWhitelist(text) {
   return text
-    .split('\n')
+    .split("\n")
     .map((entry) => entry.trim())
     .filter(Boolean);
 }
@@ -154,75 +176,127 @@ async function saveWhitelist() {
   const list = parseWhitelist(whitelistInput.value);
   await window.sleepchat.setWhitelist(list);
   whitelistDirty = false;
-  setWhitelistStatus('Saved', 'saved');
+  setWhitelistStatus("Saved", "saved");
   if (list.length > 0) {
-    appendLog(`Whitelist: ${list.join(', ')}`);
+    appendLog(`Whitelist: ${list.join(", ")}`);
   } else {
-    appendLog('Whitelist cleared.');
+    appendLog("Whitelist cleared.");
   }
 }
 
 function scheduleAutoSave() {
   whitelistDirty = true;
-  setWhitelistStatus('Unsaved', 'unsaved');
+  setWhitelistStatus("Unsaved", "unsaved");
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
-    setWhitelistStatus('Saving...', 'saving');
+    setWhitelistStatus("Saving...", "saving");
     await saveWhitelist();
   }, 1000);
 }
 
-whitelistInput.addEventListener('input', () => {
+whitelistInput.addEventListener("input", () => {
   scheduleAutoSave();
 });
 
-tabWhitelist.addEventListener('click', () => {
-  tabWhitelist.classList.add('active');
-  tabActivity.classList.remove('active');
-  contentWhitelist.classList.add('active');
-  contentActivity.classList.remove('active');
+tabWhitelist.addEventListener("click", () => {
+  tabWhitelist.classList.add("active");
+  tabCustomizations.classList.remove("active");
+  tabSlots.classList.remove("active");
+  tabActivity.classList.remove("active");
+  contentWhitelist.classList.add("active");
+  contentCustomizations.classList.remove("active");
+  contentSlots.classList.remove("active");
+  contentActivity.classList.remove("active");
 });
 
-tabActivity.addEventListener('click', () => {
-  tabActivity.classList.add('active');
-  tabWhitelist.classList.remove('active');
-  contentActivity.classList.add('active');
-  contentWhitelist.classList.remove('active');
+tabCustomizations.addEventListener("click", () => {
+  tabCustomizations.classList.add("active");
+  tabWhitelist.classList.remove("active");
+  tabSlots.classList.remove("active");
+  tabActivity.classList.remove("active");
+  contentCustomizations.classList.add("active");
+  contentWhitelist.classList.remove("active");
+  contentSlots.classList.remove("active");
+  contentActivity.classList.remove("active");
+  if (currentUser) {
+    fetchSlots();
+  }
+});
+
+tabSlots.addEventListener("click", () => {
+  tabSlots.classList.add("active");
+  tabWhitelist.classList.remove("active");
+  tabCustomizations.classList.remove("active");
+  tabActivity.classList.remove("active");
+  contentSlots.classList.add("active");
+  contentWhitelist.classList.remove("active");
+  contentCustomizations.classList.remove("active");
+  contentActivity.classList.remove("active");
+  if (currentUser) {
+    renderSlotManager();
+  }
+});
+
+tabActivity.addEventListener("click", () => {
+  tabActivity.classList.add("active");
+  tabWhitelist.classList.remove("active");
+  tabCustomizations.classList.remove("active");
+  tabSlots.classList.remove("active");
+  contentActivity.classList.add("active");
+  contentWhitelist.classList.remove("active");
+  contentCustomizations.classList.remove("active");
+  contentSlots.classList.remove("active");
+});
+
+const subtabs = [
+  { el: subtabResponse, type: "response" },
+  { el: subtabRequest, type: "request" },
+  { el: subtabRequestResponse, type: "requestResponse" },
+];
+
+subtabs.forEach((tab) => {
+  tab.el.addEventListener("click", () => {
+    subtabs.forEach((t) => t.el.classList.remove("active"));
+    tab.el.classList.add("active");
+    activeSlotType = tab.type;
+    renderSlotManager();
+  });
 });
 
 let isAutoStatusEnabled = false;
 
 function updateAutoStatusUI(enabled) {
   isAutoStatusEnabled = enabled;
-  autoStatusBadge.textContent = enabled ? 'Enabled' : 'Disabled';
-  autoStatusBadge.className = enabled ? 'status on' : 'status off';
-  autoStatusToggle.className = enabled ? 'secondary' : 'primary';
+  autoStatusBadge.textContent = enabled ? "Enabled" : "Disabled";
+  autoStatusBadge.className = enabled ? "status on" : "status off";
+  autoStatusToggle.className = enabled ? "secondary" : "primary";
 }
 
 const STATUS_COLORS = {
-  'none': '#9ca3af',
-  'join me': '#42CAFF',
-  'active': '#51E57E',
-  'ask me': '#E8B138',
-  'busy': '#C93131'
+  none: "#9ca3af",
+  "join me": "#42CAFF",
+  active: "#51E57E",
+  "ask me": "#E8B138",
+  busy: "#C93131",
 };
 
 function updateAutoStatusUI() {
-  const hasStatus = sleepStatus.value !== 'none';
-  const hasMessage = sleepStatusDescription.value.trim() !== '';
+  const hasStatus = sleepStatus.value !== "none";
+  const hasMessage = sleepStatusDescription.value.trim() !== "";
   const enabled = hasStatus || hasMessage;
-  
-  autoStatusBadge.textContent = enabled ? 'Enabled' : 'Disabled';
-  autoStatusBadge.className = enabled ? 'status on' : 'status off';
-  
+
+  autoStatusBadge.textContent = enabled ? "Enabled" : "Disabled";
+  autoStatusBadge.className = enabled ? "status on" : "status off";
+
   // Update dropdown text color to match selected status
-  sleepStatus.style.color = STATUS_COLORS[sleepStatus.value] || '#e3e5e8';
+  sleepStatus.style.color = STATUS_COLORS[sleepStatus.value] || "#e3e5e8";
 }
 
 async function saveSettings() {
   const settings = {
-    sleepStatus: sleepStatus.value,
-    sleepStatusDescription: sleepStatusDescription.value
+    sleepStatus: sleepStatus.value || "none",
+    sleepStatusDescription: sleepStatusDescription.value || "",
+    statusMessageSlot: Number(statusMessageSlot.value) || 0,
   };
   await window.sleepchat.setSettings(settings);
 }
@@ -234,22 +308,26 @@ function scheduleSettingsSave() {
   }, 1000);
 }
 
-sleepStatus.addEventListener('change', () => {
+sleepStatus.addEventListener("change", () => {
   updateAutoStatusUI();
   scheduleSettingsSave();
 });
 
-sleepStatusDescription.addEventListener('input', () => {
-  updateAutoStatusUI();
+sleepStatusDescription.addEventListener("input", () => {
   scheduleSettingsSave();
 });
 
-loginButton.addEventListener('click', async () => {
-  setAuthHint('');
+statusMessageSlot.addEventListener("change", () => {
+  updateSlotPreviews();
+  scheduleSettingsSave();
+});
+
+loginButton.addEventListener("click", async () => {
+  setAuthHint("");
   const username = usernameInput.value.trim();
   const password = passwordInput.value;
   if (!username || !password) {
-    setAuthHint('Username and password required.', true);
+    setAuthHint("Username and password required.", true);
     return;
   }
 
@@ -257,25 +335,27 @@ loginButton.addEventListener('click', async () => {
   try {
     const result = await window.sleepchat.login(username, password);
     if (!result.ok) {
-      setAuthHint(result.error || 'Login failed.', true);
+      setAuthHint(result.error || "Login failed.", true);
       return;
     }
 
-    if (result.result?.status === '2fa') {
+    if (result.result?.status === "2fa") {
       twoFactorMethods = result.result.methods || [];
-      twoFactorType = twoFactorMethods.includes('emailOtp') ? 'email' : 'totp';
+      twoFactorType = twoFactorMethods.includes("emailOtp") ? "email" : "totp";
       updateModalCopy();
-      modalCode.value = '';
+      modalCode.value = "";
       setModalState(true);
-      setAuthHint('Two-factor required.');
+      setAuthHint("Two-factor required.");
     } else {
-      passwordInput.value = '';
+      passwordInput.value = "";
       if (result.result?.user) {
         setUserInfo(result.result.user);
+        await fetchSlots();
       } else {
         await refreshAuthStatus();
+        if (currentUser) await fetchSlots();
       }
-      setAuthHint('');
+      setAuthHint("");
     }
   } catch (error) {
     setAuthHint(error.message, true);
@@ -284,42 +364,44 @@ loginButton.addEventListener('click', async () => {
   }
 });
 
-logoutButton.addEventListener('click', async () => {
+logoutButton.addEventListener("click", async () => {
   await window.sleepchat.logout();
-  setAuthHint('');
+  setAuthHint("");
   setUserInfo(null);
-  usernameInput.value = '';
-  passwordInput.value = '';
+  usernameInput.value = "";
+  passwordInput.value = "";
 });
 
-modalToggle.addEventListener('click', () => {
-  if (twoFactorType === 'otp') {
-    twoFactorType = twoFactorMethods.includes('emailOtp') ? 'email' : 'totp';
+modalToggle.addEventListener("click", () => {
+  if (twoFactorType === "otp") {
+    twoFactorType = twoFactorMethods.includes("emailOtp") ? "email" : "totp";
   } else {
-    twoFactorType = 'otp';
+    twoFactorType = "otp";
   }
   updateModalCopy();
 });
 
-modalSubmit.addEventListener('click', async () => {
+modalSubmit.addEventListener("click", async () => {
   const code = modalCode.value.trim();
   if (!code) return;
   modalSubmit.disabled = true;
   try {
     const result = await window.sleepchat.verifyTwoFactor(twoFactorType, code);
     if (!result.ok) {
-      setAuthHint(result.error || 'Verification failed.', true);
+      setAuthHint(result.error || "Verification failed.", true);
       return;
     }
     setModalState(false);
-    modalCode.value = '';
-    passwordInput.value = '';
+    modalCode.value = "";
+    passwordInput.value = "";
     if (result.user) {
       setUserInfo(result.user);
+      await fetchSlots();
     } else {
       await refreshAuthStatus();
+      if (currentUser) await fetchSlots();
     }
-    setAuthHint('');
+    setAuthHint("");
   } catch (error) {
     setAuthHint(error.message, true);
   } finally {
@@ -327,7 +409,7 @@ modalSubmit.addEventListener('click', async () => {
   }
 });
 
-toggleButton.addEventListener('click', async () => {
+toggleButton.addEventListener("click", async () => {
   const status = await window.sleepchat.getStatus();
   if (status.sleepMode) {
     await window.sleepchat.stopSleep();
@@ -338,136 +420,142 @@ toggleButton.addEventListener('click', async () => {
   }
 });
 
-updateButton.addEventListener('click', async () => {
+updateButton.addEventListener("click", async () => {
   await window.sleepchat.downloadUpdate();
 });
 
-manageWhitelistButton.addEventListener('click', async () => {
-  appendLog('Loading friends list...');
+manageWhitelistButton.addEventListener("click", async () => {
+  appendLog("Loading friends list...");
   const result = await window.sleepchat.getFriends();
-  
+
   if (!result.ok) {
     appendLog(`Failed to load friends: ${result.error}`);
     return;
   }
-  
+
   allFriends = result.friends;
-  
+
   // Parse current whitelist to pre-select friends
   const currentWhitelist = whitelistInput.value
-    .split('\n')
-    .map(line => line.trim().toLowerCase())
+    .split("\n")
+    .map((line) => line.trim().toLowerCase())
     .filter(Boolean);
-  
+
   selectedFriends.clear();
-  allFriends.forEach(friend => {
+  allFriends.forEach((friend) => {
     const idMatch = currentWhitelist.includes(friend.id.toLowerCase());
-    const nameMatch = currentWhitelist.includes(friend.displayName.toLowerCase());
+    const nameMatch = currentWhitelist.includes(
+      friend.displayName.toLowerCase(),
+    );
     if (idMatch || nameMatch) {
       selectedFriends.add(friend.id);
     }
   });
-  
+
   renderFriendsList(allFriends);
-  friendsModal.classList.add('active');
+  friendsModal.classList.add("active");
 });
 
-friendsSearch.addEventListener('input', () => {
+friendsSearch.addEventListener("input", () => {
   const query = friendsSearch.value.toLowerCase();
-  const filtered = allFriends.filter(friend => 
-    friend.displayName.toLowerCase().includes(query) ||
-    friend.id.toLowerCase().includes(query)
+  const filtered = allFriends.filter(
+    (friend) =>
+      friend.displayName.toLowerCase().includes(query) ||
+      friend.id.toLowerCase().includes(query),
   );
   renderFriendsList(filtered);
 });
 
-friendsClose.addEventListener('click', () => {
-  friendsModal.classList.remove('active');
-  friendsSearch.value = '';
+friendsClose.addEventListener("click", () => {
+  friendsModal.classList.remove("active");
+  friendsSearch.value = "";
 });
 
-friendsSave.addEventListener('click', () => {
+friendsSave.addEventListener("click", () => {
   // Build list from selected friends (use display names)
   const selectedNames = allFriends
-    .filter(f => selectedFriends.has(f.id))
-    .map(f => f.displayName);
-  
+    .filter((f) => selectedFriends.has(f.id))
+    .map((f) => f.displayName);
+
   // Get existing whitelist entries
   const existingEntries = whitelistInput.value
-    .split('\n')
-    .map(line => line.trim())
+    .split("\n")
+    .map((line) => line.trim())
     .filter(Boolean);
-  
+
   // Combine existing and new entries, removing duplicates (case-insensitive)
-  const existingLower = existingEntries.map(e => e.toLowerCase());
-  const newEntries = selectedNames.filter(name => 
-    !existingLower.includes(name.toLowerCase())
+  const existingLower = existingEntries.map((e) => e.toLowerCase());
+  const newEntries = selectedNames.filter(
+    (name) => !existingLower.includes(name.toLowerCase()),
   );
-  
+
   // Append new entries to the end
   const combined = [...existingEntries, ...newEntries];
-  
-  whitelistInput.value = combined.join('\n');
-  setWhitelistStatus('Saving...', 'saving');
+
+  whitelistInput.value = combined.join("\n");
+  setWhitelistStatus("Saving...", "saving");
   scheduleAutoSave();
-  
-  friendsModal.classList.remove('active');
-  friendsSearch.value = '';
-  
+
+  friendsModal.classList.remove("active");
+  friendsSearch.value = "";
+
   if (newEntries.length > 0) {
     appendLog(`Added ${newEntries.length} new friend(s) to whitelist`);
   } else {
-    appendLog('All selected friends already in whitelist');
+    appendLog("All selected friends already in whitelist");
   }
 });
 
 function renderFriendsList(friends) {
-  friendsList.innerHTML = '';
-  
+  friendsList.innerHTML = "";
+
   if (friends.length === 0) {
-    friendsList.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--color-muted);">No friends found</div>';
+    friendsList.innerHTML =
+      '<div style="padding: 20px; text-align: center; color: var(--color-muted);">No friends found</div>';
     return;
   }
-  
-  friends.forEach(friend => {
-    const item = document.createElement('div');
-    item.className = 'friend-item';
+
+  friends.forEach((friend) => {
+    const item = document.createElement("div");
+    item.className = "friend-item";
     if (selectedFriends.has(friend.id)) {
-      item.classList.add('selected');
+      item.classList.add("selected");
     }
-    
-    const avatar = document.createElement('img');
-    avatar.className = 'friend-avatar';
-    avatar.src = friend.thumbnailUrl || '';
-    avatar.onerror = () => { avatar.style.display = 'none'; };
-    
-    const info = document.createElement('div');
-    info.className = 'friend-info';
-    
-    const name = document.createElement('div');
-    name.className = 'friend-name';
+
+    const avatar = document.createElement("img");
+    avatar.className = "friend-avatar";
+    avatar.src = friend.thumbnailUrl || "";
+    avatar.onerror = () => {
+      avatar.style.display = "none";
+    };
+
+    const info = document.createElement("div");
+    info.className = "friend-info";
+
+    const name = document.createElement("div");
+    name.className = "friend-name";
     name.textContent = friend.displayName;
-    
-    const status = document.createElement('div');
-    status.className = 'friend-status';
+
+    const status = document.createElement("div");
+    status.className = "friend-status";
     status.textContent = friend.statusDescription || friend.status;
-    
+
     info.appendChild(name);
     info.appendChild(status);
-    
+
     item.appendChild(avatar);
     item.appendChild(info);
-    
-    item.addEventListener('click', () => {
+
+    item.addEventListener("click", () => {
       if (selectedFriends.has(friend.id)) {
         selectedFriends.delete(friend.id);
-        item.classList.remove('selected');
+        item.classList.remove("selected");
       } else {
         selectedFriends.add(friend.id);
-        item.classList.add('selected');
+        item.classList.add("selected");
       }
     });
-    
+
     friendsList.appendChild(item);
   });
 }
@@ -475,14 +563,149 @@ function renderFriendsList(friends) {
 window.sleepchat.onLog((message) => appendLog(message));
 
 window.sleepchat.onUpdateAvailable(() => {
-  updateButton.style.display = 'block';
+  updateButton.style.display = "block";
 });
 
 async function loadSettings() {
   const settings = await window.sleepchat.getSettings();
-  sleepStatus.value = settings.sleepStatus || 'none';
-  sleepStatusDescription.value = settings.sleepStatusDescription || '';
+
+  // Clean up corrupted settings if they contain objects
+  let settingsChanged = false;
+  if (typeof settings.sleepStatus !== "string") {
+    settings.sleepStatus = "none";
+    settingsChanged = true;
+  }
+  if (typeof settings.sleepStatusDescription !== "string") {
+    settings.sleepStatusDescription = "";
+    settingsChanged = true;
+  }
+
+  // Save cleaned settings if corruption was found
+  if (settingsChanged) {
+    await window.sleepchat.setSettings(settings);
+  }
+
+  sleepStatus.value =
+    typeof settings.sleepStatus === "string" ? settings.sleepStatus : "none";
+  sleepStatusDescription.value =
+    typeof settings.sleepStatusDescription === "string"
+      ? settings.sleepStatusDescription
+      : "";
+  statusMessageSlot.value =
+    typeof settings.statusMessageSlot === "number"
+      ? settings.statusMessageSlot
+      : 0;
   updateAutoStatusUI();
+}
+
+async function renderSlotManager() {
+  slotsList.innerHTML =
+    '<div class="hint" style="padding: 20px; text-align: center;">Loading slots...</div>';
+  slotsStatus.textContent = "Loading...";
+  slotsStatus.className = "status saving";
+
+  try {
+    const result = await window.sleepchat.getMessageSlots(activeSlotType);
+    if (!result.ok) throw new Error(result.error);
+
+    slotsList.innerHTML = "";
+    result.messages.forEach((msg, i) => {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.style.gap = "8px";
+      row.style.alignItems = "center";
+
+      const label = document.createElement("span");
+      label.className = "hint";
+      label.style.width = "45px";
+      label.textContent = `Slot ${i + 1}:`;
+
+      const input = document.createElement("input");
+      const messageText = typeof msg.message === "string" ? msg.message : "";
+      input.value = messageText;
+      input.style.margin = "0";
+      input.style.flex = "1";
+      input.placeholder = "Empty";
+
+      const saveBtn = document.createElement("button");
+      saveBtn.className = "ghost";
+      saveBtn.style.margin = "0";
+      saveBtn.style.padding = "4px 8px";
+      saveBtn.style.fontSize = "11px";
+      saveBtn.textContent = "Save";
+
+      saveBtn.onclick = async () => {
+        saveBtn.disabled = true;
+        saveBtn.textContent = "...";
+        try {
+          const updateResult = await window.sleepchat.updateMessageSlot(
+            activeSlotType,
+            i,
+            input.value,
+          );
+          if (!updateResult.ok) throw new Error(updateResult.error);
+          appendLog(`Updated ${activeSlotType} Slot ${i + 1}`);
+          // If we updated the active customizations slots, refresh them
+          if (activeSlotType === "requestResponse") {
+            fetchSlots();
+          }
+        } catch (error) {
+          appendLog(`Failed to update slot: ${error.message}`);
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Save";
+        }
+      };
+
+      row.appendChild(label);
+      row.appendChild(input);
+      row.appendChild(saveBtn);
+      slotsList.appendChild(row);
+    });
+
+    slotsStatus.textContent = "Ready";
+    slotsStatus.className = "status saved";
+  } catch (error) {
+    slotsList.innerHTML = `<div class="status-text error" style="padding: 20px; text-align: center;">${error.message}</div>`;
+    slotsStatus.textContent = "Error";
+    slotsStatus.className = "status error";
+  }
+}
+
+async function fetchSlots() {
+  console.log("Fetching message slots...");
+  try {
+    const responseResult =
+      await window.sleepchat.getMessageSlots("requestResponse");
+    console.log("Response slots result:", responseResult);
+    if (responseResult.ok && Array.isArray(responseResult.messages)) {
+      responseSlotsData = responseResult.messages;
+      responseSlotsData.forEach((msg, i) => {
+        if (i < 12 && statusMessageSlot.options[i]) {
+          statusMessageSlot.options[i].textContent = `Slot ${i + 1}`;
+        }
+      });
+    }
+    updateSlotPreviews();
+  } catch (error) {
+    console.error("Failed to fetch slots:", error);
+  }
+}
+
+function updateSlotPreviews() {
+  const statusIdx = Number(statusMessageSlot.value);
+  if (responseSlotsData[statusIdx]) {
+    const slotData = responseSlotsData[statusIdx];
+    let msg = "";
+    if (slotData && typeof slotData.message === "string") {
+      msg = slotData.message;
+    } else if (slotData && typeof slotData === "string") {
+      msg = slotData;
+    }
+    statusSlotPreview.value = typeof msg === "string" ? msg : "";
+  } else {
+    statusSlotPreview.value = "";
+  }
 }
 
 (async () => {
@@ -491,4 +714,7 @@ async function loadSettings() {
   const status = await window.sleepchat.getStatus();
   setStatus(status.sleepMode);
   await refreshAuthStatus();
+  if (currentUser) {
+    await fetchSlots();
+  }
 })();
