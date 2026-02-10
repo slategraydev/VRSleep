@@ -1,11 +1,20 @@
 const { app, BrowserWindow } = require("electron");
 
+/**
+ * Main Entry Point for VRSleep.
+ * Orchestrates service initialization, IPC registration, and application lifecycle.
+ */
+
 try {
+  // Hot reloading for development environments
   require("electron-reloader")(module);
 } catch (_) {}
 
+// Local Stores
 const { getWhitelist, setWhitelist } = require("../stores/whitelist-store");
 const { getSettings, setSettings } = require("../stores/settings-store");
+
+// VRChat API Integration
 const {
   fetchInvites,
   sendInvite,
@@ -15,6 +24,7 @@ const {
   updateStatus,
   getMessageSlots,
 } = require("../api/vrcapi");
+
 const {
   login,
   verifyTwoFactor,
@@ -22,41 +32,61 @@ const {
   getAuthStatus,
   isReadyForApi,
 } = require("../api/vrcauth");
+
+// Internal Modules
 const { applyLowRamSettings } = require("./low-ram");
 const updater = require("./updater");
 const { createMainWindow } = require("./window");
 const { createSleepMode } = require("./sleep-mode");
 const { registerIpcHandlers } = require("./ipc");
 
+// State Management
 let mainWindow;
 let updaterInstance = null;
 let sleepModeInstance = null;
 let isQuitting = false;
 
+// Polling Configuration
 const DEFAULT_POLL_MS = 15000;
 const MIN_POLL_MS = 10000;
 
+/**
+ * Sends a log message to the renderer process for display in the Activity Log.
+ */
 function log(message) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send("log", message);
   }
 }
 
+/**
+ * Notifies the renderer that settings have changed globally.
+ */
 function notifySettingsChanged(settings) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send("settings-changed", settings);
   }
 }
 
+// Optimization: Apply Electron-level performance tweaks before window creation
 applyLowRamSettings();
 
+/**
+ * Main Application Lifecycle
+ */
 app.whenReady().then(() => {
+  // Required for Windows Toast Notifications and taskbar grouping
   app.setAppUserModelId("com.sleepchat.app");
 
+  // 1. Initialize UI
   mainWindow = createMainWindow(() => updater.checkForUpdates());
+
+  // 2. Initialize Updater
   updaterInstance = updater.setupAutoUpdater(() => mainWindow, log);
   updater.checkForUpdates();
 
+  // 3. Initialize Sleep Mode Engine
+  // Orchestrates the core logic of checking invites and responding.
   sleepModeInstance = createSleepMode({
     getWhitelist,
     fetchInvites,
@@ -77,12 +107,15 @@ app.whenReady().then(() => {
     minPollMs: MIN_POLL_MS,
   });
 
+  // 4. Register IPC Handlers
+  // Bridges the frontend UI with the backend services.
   registerIpcHandlers({
     getWhitelist,
     setWhitelist,
     getSettings,
     setSettings: (settings) => {
       const next = setSettings(settings);
+      // Immediately refresh engine state when settings change via UI
       if (sleepModeInstance) {
         sleepModeInstance.refreshStatus();
       }
@@ -108,15 +141,21 @@ app.whenReady().then(() => {
   });
 });
 
+/**
+ * Graceful Shutdown Handling
+ * Ensures that if Sleep Mode is active, we properly stop it (and restore VRC status)
+ * before the application process exits.
+ */
 app.on("before-quit", async (event) => {
   if (isQuitting) return;
+
   if (sleepModeInstance && sleepModeInstance.status().sleepMode) {
     event.preventDefault();
     isQuitting = true;
     try {
       await sleepModeInstance.stop();
     } catch (error) {
-      // Ignore error during quit
+      // Fail silently during shutdown to avoid hanging the process
     }
     app.quit();
   }

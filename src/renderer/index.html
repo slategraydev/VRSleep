@@ -9,6 +9,9 @@
         />
         <title>VRSleep</title>
         <style>
+            /**
+             * Application Theming & Variables
+             */
             :root {
                 color-scheme: dark;
                 font-family: "Segoe UI", system-ui, sans-serif;
@@ -32,6 +35,11 @@
                 --color-status-off-text: #a2a8b0;
                 --color-warning: #d9b86a;
             }
+
+            /**
+             * Base Layout
+             * background is applied to html/body to prevent white flashes on load.
+             */
             html,
             body {
                 background: #0f1115;
@@ -43,6 +51,13 @@
                 height: 100%;
                 box-sizing: border-box;
             }
+
+            /* Global Component Styles */
+            h1 {
+                font-size: 18px;
+                margin: 0;
+            }
+
             .header {
                 display: flex;
                 justify-content: space-between;
@@ -50,29 +65,20 @@
                 margin-bottom: 4px;
                 margin-top: -4px;
             }
+
             .user-header {
                 display: flex;
                 align-items: center;
                 gap: 12px;
             }
+
             .user-name {
                 font-size: 15px;
                 font-weight: 500;
                 color: #e5e7eb;
                 line-height: 28px;
             }
-            .user-header button {
-                padding: 0 12px;
-                font-size: 12px;
-                height: 28px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            h1 {
-                font-size: 18px;
-                margin: 0;
-            }
+
             .card {
                 background: var(--color-card);
                 border: 1px solid var(--color-border);
@@ -82,26 +88,34 @@
                 flex-direction: column;
                 gap: 12px;
             }
+
             .card.tabs-container {
                 padding-top: 0;
                 gap: 0;
             }
+
+            /* View Visibility Management */
             .view {
                 display: none;
             }
+
             .view.active {
                 display: flex;
                 flex-direction: column;
                 gap: 12px;
             }
+
+            /* Form Elements */
             label {
                 display: block;
                 font-size: 12px;
                 margin-bottom: 4px;
                 color: var(--color-muted);
             }
+
             input,
-            select {
+            select,
+            textarea {
                 width: 100%;
                 background: var(--color-input-bg);
                 border: 1px solid var(--color-border);
@@ -110,9 +124,18 @@
                 padding: 8px 10px;
                 box-sizing: border-box;
             }
+
             select {
                 cursor: pointer;
             }
+
+            textarea {
+                min-height: 140px;
+                max-height: 220px;
+                resize: vertical;
+            }
+
+            /* Status Badges */
             .status {
                 padding: 4px 10px;
                 border-radius: 6px;
@@ -122,38 +145,31 @@
                 text-transform: uppercase;
                 letter-spacing: 0.02em;
             }
+
             .status.on,
             .status.saved {
                 background: var(--color-status-on-bg);
                 color: var(--color-status-on-text);
             }
+
             .status.off,
             .status.unsaved {
                 background: var(--color-status-off-bg);
                 color: var(--color-status-off-text);
             }
+
             .status.warning,
             .status.saving {
                 background: rgba(217, 184, 106, 0.1);
                 color: var(--color-warning);
             }
+
             .status.error {
                 background: rgba(248, 113, 113, 0.1);
                 color: #f87171;
             }
 
-            textarea {
-                width: 100%;
-                min-height: 140px;
-                max-height: 220px;
-                background: var(--color-input-bg);
-                border: 1px solid var(--color-border);
-                color: var(--color-text);
-                border-radius: 8px;
-                padding: 10px;
-                resize: vertical;
-                box-sizing: border-box;
-            }
+            /* Buttons & Interactivity */
             button {
                 padding: 8px 12px;
                 border-radius: 8px;
@@ -161,46 +177,59 @@
                 background: var(--color-primary);
                 color: var(--color-primary-text);
                 cursor: pointer;
+                font-weight: 500;
+                transition: opacity 0.2s ease;
             }
+
             button:disabled {
                 opacity: 0.5;
                 cursor: not-allowed;
                 pointer-events: none;
             }
+
             button.primary {
                 background: var(--color-primary);
                 color: var(--color-primary-text);
             }
+
             button.secondary {
                 background: var(--color-secondary);
                 color: var(--color-secondary-text);
             }
+
             button.ghost {
                 background: transparent;
                 border: 1px solid var(--color-ghost-border);
                 color: var(--color-ghost-text);
             }
+
             button.countdown-mode {
                 background: var(--color-secondary) !important;
                 color: #ff5f5f !important;
-                cursor: not-allowed;
             }
+
+            /* Utility Classes */
             .row {
                 display: flex;
                 gap: 8px;
                 align-items: center;
             }
+
             .row.space {
                 justify-content: space-between;
             }
+
             .row.top {
                 align-items: flex-start;
             }
+
             .hint {
                 font-size: 11px;
                 color: var(--color-muted);
                 margin: 0;
             }
+
+            /* Modals & Overlays */
             .modal {
                 position: fixed;
                 inset: 0;
@@ -208,10 +237,13 @@
                 display: none;
                 align-items: center;
                 justify-content: center;
+                z-index: 100;
             }
+
             .modal.active {
                 display: flex;
             }
+
             .modal-card {
                 width: 320px;
                 background: #0b1220;
@@ -222,18 +254,23 @@
                 flex-direction: column;
                 gap: 12px;
             }
+
+            /* Activity Log */
             .log {
                 display: flex;
                 flex-direction: column;
                 gap: 6px;
                 font-size: 12px;
             }
+
             .log-item {
                 background: #111827;
                 border: 1px solid #1f2937;
                 border-radius: 6px;
                 padding: 6px 8px;
             }
+
+            /* Friends Selection */
             .friend-item {
                 display: flex;
                 align-items: center;
@@ -246,13 +283,16 @@
                 cursor: pointer;
                 user-select: none;
             }
+
             .friend-item:hover {
                 background: #1a1f2e;
             }
+
             .friend-item.selected {
                 background: var(--color-status-on-bg);
                 border-color: var(--color-primary);
             }
+
             .friend-avatar {
                 width: 32px;
                 height: 32px;
@@ -260,10 +300,12 @@
                 background: var(--color-secondary);
                 flex-shrink: 0;
             }
+
             .friend-info {
                 flex: 1;
                 min-width: 0;
             }
+
             .friend-name {
                 font-size: 13px;
                 font-weight: 500;
@@ -272,6 +314,7 @@
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
+
             .friend-status {
                 font-size: 11px;
                 color: var(--color-muted);
@@ -279,12 +322,15 @@
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
+
+            /* Tabs Interface */
             .tabs {
                 display: flex;
                 justify-content: space-between;
                 gap: 8px;
                 border-bottom: 1px solid var(--color-border);
             }
+
             .tab {
                 flex: 1;
                 padding: 8px 0;
@@ -296,27 +342,30 @@
                 cursor: pointer;
                 font-size: 13px;
                 font-weight: 500;
-                margin: 0;
                 border-radius: 0;
             }
+
             .tab:hover {
-                color: var(--text);
-                background: transparent;
+                color: var(--color-text);
             }
+
             .tab.active {
                 color: var(--color-primary);
                 border-bottom-color: var(--color-primary);
             }
+
             .tab-content {
                 display: none;
                 padding-top: 12px;
                 flex-direction: column;
                 gap: 16px;
             }
+
             .tab-content.active {
                 display: flex;
             }
-            /* Toggle Switch */
+
+            /* Toggle Switches */
             .switch {
                 position: relative;
                 display: inline-block;
@@ -324,15 +373,13 @@
                 height: 22px;
                 flex-shrink: 0;
             }
+
             .switch input {
                 opacity: 0;
                 width: 0;
                 height: 0;
-                margin: 0;
             }
-            .switch label {
-                margin: 0;
-            }
+
             .slider {
                 position: absolute;
                 cursor: pointer;
@@ -345,6 +392,7 @@
                 border-radius: 22px;
                 border: 1px solid var(--color-border);
             }
+
             .slider:before {
                 position: absolute;
                 content: "";
@@ -356,17 +404,18 @@
                 transition: 0.3s;
                 border-radius: 50%;
             }
+
             input:checked + .slider {
                 background-color: var(--color-status-on-bg);
                 border-color: var(--color-primary);
             }
+
             input:checked + .slider:before {
                 transform: translateX(18px);
                 background-color: var(--color-status-on-text);
             }
 
-            /* Layout Helpers */
-
+            /* Specialized Layout Components */
             .section {
                 display: flex;
                 flex-direction: column;
@@ -380,47 +429,58 @@
             .w-full {
                 width: 100%;
             }
+
             .flex-1 {
                 flex: 1;
             }
+
             .text-right {
                 text-align: right;
             }
+
             .text-center {
                 text-align: center;
             }
+
             .btn-small {
                 padding: 4px 12px;
                 font-size: 11px;
                 height: 28px;
             }
+
             .status-select {
                 width: 90px;
                 flex-shrink: 0;
             }
+
             .type-select {
                 width: 110px;
                 flex-shrink: 0;
             }
+
             .slot-select {
                 width: 75px;
                 flex-shrink: 0;
             }
+
             .msg-preview {
                 min-height: 52px;
                 height: 52px;
                 padding: 8px;
                 resize: none;
             }
+
             .friends-modal {
                 width: 420px;
                 max-height: 80vh;
                 overflow: hidden;
             }
+
             .friends-list {
                 overflow-y: auto;
                 height: 300px;
             }
+
             .footer {
                 margin-top: 12px;
                 font-size: 11px;
@@ -429,6 +489,7 @@
         </style>
     </head>
     <body>
+        <!-- Application Header -->
         <div class="header">
             <h1>VRSleep</h1>
             <div id="user-header" class="user-header" style="display: none">
@@ -440,7 +501,7 @@
             </div>
         </div>
 
-        <!-- Login View -->
+        <!-- Login View (Hidden by default, shown via JS) -->
         <div id="login-view" class="view">
             <div class="card">
                 <strong>Login to VRChat</strong>
@@ -463,15 +524,16 @@
             </div>
         </div>
 
-        <!-- Main View -->
+        <!-- Main Dashboard View -->
         <div id="main-view" class="view">
+            <!-- Sleep Mode Engine Control -->
             <div class="card">
                 <div class="row space">
                     <strong>Sleep Mode</strong>
                     <div id="status" class="status off">Disabled</div>
                 </div>
                 <p class="hint">
-                    When enabled, SleepChat will automatically respond to invite
+                    When enabled, VRSleep will automatically respond to invite
                     requests from whitelisted users.
                 </p>
                 <button id="toggle" class="primary w-full">
@@ -479,6 +541,7 @@
                 </button>
             </div>
 
+            <!-- Configuration Tabs -->
             <div class="card tabs-container">
                 <div class="tabs">
                     <button id="tab-whitelist" class="tab active">
@@ -490,6 +553,7 @@
                     <button id="tab-activity" class="tab">Activity Log</button>
                 </div>
 
+                <!-- Whitelist Management Tab -->
                 <div id="content-whitelist" class="tab-content active">
                     <div class="row space">
                         <label class="m-0">Whitelist (one per line)</label>
@@ -506,7 +570,9 @@
                     </button>
                 </div>
 
+                <!-- Customizations Tab -->
                 <div id="content-customizations" class="tab-content">
+                    <!-- Status Customization Section -->
                     <div class="section">
                         <div class="row space">
                             <strong class="flex-1">Custom Status</strong>
@@ -558,6 +624,7 @@
                                 id="sleep-status-description"
                                 placeholder="Status message..."
                                 class="flex-1"
+                                maxlength="32"
                             />
                         </div>
                         <div class="text-right">
@@ -567,6 +634,7 @@
                         </div>
                     </div>
 
+                    <!-- Invite Message Customization Section -->
                     <div class="section">
                         <div class="row space">
                             <strong class="flex-1">Invite Message</strong>
@@ -641,13 +709,14 @@
                     </div>
                 </div>
 
+                <!-- Activity Log Tab -->
                 <div id="content-activity" class="tab-content">
                     <div class="log" id="log"></div>
                 </div>
             </div>
         </div>
 
-        <!-- 2FA Modal -->
+        <!-- 2FA Modal Overlay -->
         <div id="modal" class="modal">
             <div class="modal-card">
                 <strong id="modal-title">Two-factor verification</strong>
@@ -667,7 +736,7 @@
             </div>
         </div>
 
-        <!-- Friends Selector Modal -->
+        <!-- Friends Selector Modal Overlay -->
         <div id="friends-modal" class="modal">
             <div class="modal-card friends-modal">
                 <div class="row space">
@@ -684,6 +753,7 @@
             </div>
         </div>
 
+        <!-- Application Footer -->
         <div class="text-center footer">
             Made with ❤️ by -Jesski-, for itsLyxie and sheepsheep.
         </div>

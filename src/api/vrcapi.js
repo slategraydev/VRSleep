@@ -1,6 +1,9 @@
 const API_BASE = "https://api.vrchat.cloud/api/1";
 const { getAuthHeaders, requestJson } = require("./vrcauth");
 
+/**
+ * Builds a complete VRChat API URL, optionally appending the API key.
+ */
 function buildUrl(path) {
   const apiKey = process.env.VRC_API_KEY;
   if (!apiKey) return `${API_BASE}${path}`;
@@ -8,12 +11,39 @@ function buildUrl(path) {
   return `${API_BASE}${path}${joiner}apiKey=${encodeURIComponent(apiKey)}`;
 }
 
+/**
+ * Retrieves authentication headers or throws if not logged in.
+ */
 function getHeaders() {
   const headers = getAuthHeaders();
   if (!headers) throw new Error("Not authenticated");
   return headers;
 }
 
+/**
+ * Internal helper to parse VRChat's varied message slot responses.
+ * The API sometimes returns a single object, a raw string, or an array of all slots.
+ */
+function parseSlotResponse(json, expectedSlot) {
+  if (Array.isArray(json)) {
+    return (
+      json.find((s) => s.slot === Number(expectedSlot)) || {
+        slot: Number(expectedSlot),
+        message: "",
+        remainingCooldownMinutes: 0,
+      }
+    );
+  }
+  return {
+    slot: Number(expectedSlot),
+    message: json?.message || (typeof json === "string" ? json : ""),
+    remainingCooldownMinutes: json?.remainingCooldownMinutes || 0,
+  };
+}
+
+/**
+ * Fetches pending invite requests from other users.
+ */
 async function fetchInvites() {
   const { json: data } = await requestJson(
     "/auth/user/notifications?n=50&offset=0",
@@ -25,20 +55,20 @@ async function fetchInvites() {
 
   if (!Array.isArray(data)) return [];
 
-  // Filter for requestInvite notifications (when someone asks you to invite them)
-  const inviteNotifications = data.filter((item) => {
-    return item.type === "requestInvite" && item.senderUserId;
-  });
-
-  const invites = inviteNotifications.map((item) => ({
-    id: item.id || item._id,
-    senderId: item.senderUserId || item.senderId || item.userId,
-    senderDisplayName:
-      item.senderDisplayName || item.senderUsername || item.displayName,
-  }));
-  return invites;
+  return data
+    .filter((item) => item.type === "requestInvite" && item.senderUserId)
+    .map((item) => ({
+      id: item.id || item._id,
+      senderId: item.senderUserId || item.senderId || item.userId,
+      senderDisplayName:
+        item.senderDisplayName || item.senderUsername || item.displayName,
+    }));
 }
 
+/**
+ * Sends an invite to a specific user.
+ * Automatically resolves the current user's location to ensure the invite is valid.
+ */
 async function sendInvite(
   userId,
   message = "",
@@ -47,7 +77,6 @@ async function sendInvite(
 ) {
   if (!userId) throw new Error("Missing user id");
 
-  // Get current user location
   const { json: userData } = await requestJson("/auth/user", {
     method: "GET",
     headers: getHeaders(),
@@ -57,9 +86,7 @@ async function sendInvite(
   const presenceInstance = userData.presence?.instance;
   const presenceWorld = userData.presence?.world;
 
-  // Construct proper location format: worldId:instanceId
   let inviteLocation;
-
   if (presenceWorld && presenceInstance) {
     inviteLocation = `${presenceWorld}:${presenceInstance}`;
   } else if (presenceInstance && presenceInstance.includes("~")) {
@@ -72,10 +99,7 @@ async function sendInvite(
     throw new Error("Cannot send invite: No valid world location found.");
   }
 
-  const body = {
-    instanceId: inviteLocation,
-  };
-
+  const body = { instanceId: inviteLocation };
   if (message && message.trim()) {
     body.message = message.trim();
   } else if (messageSlot !== null && messageSlot !== undefined) {
@@ -92,9 +116,11 @@ async function sendInvite(
   return json;
 }
 
+/**
+ * Hides/deletes a notification from the user's feed.
+ */
 async function deleteNotification(notificationId) {
   if (!notificationId) throw new Error("Missing notification id");
-
   const { json } = await requestJson(
     `/auth/user/notifications/${encodeURIComponent(notificationId)}/hide`,
     {
@@ -102,17 +128,18 @@ async function deleteNotification(notificationId) {
       headers: getHeaders(),
     },
   );
-
   return json;
 }
 
+/**
+ * Fetches the full list of friends for the current user.
+ */
 async function getFriends() {
   let allFriends = [];
   let offset = 0;
   const limit = 100;
   let hasMore = true;
 
-  // Fetch all friends with pagination (don't include offline param to get ALL friends)
   while (hasMore) {
     const { json: friends } = await requestJson(
       `/auth/user/friends?n=${limit}&offset=${offset}`,
@@ -128,8 +155,6 @@ async function getFriends() {
     }
 
     allFriends.push(...friends);
-
-    // If we got fewer results than the limit, we've reached the end
     if (friends.length < limit) {
       hasMore = false;
     } else {
@@ -148,6 +173,9 @@ async function getFriends() {
   }));
 }
 
+/**
+ * Retrieves the currently authenticated user's data.
+ */
 async function getCurrentUser() {
   const { json } = await requestJson("/auth/user", {
     method: "GET",
@@ -156,20 +184,22 @@ async function getCurrentUser() {
   return json;
 }
 
+/**
+ * Updates the user's status (Active, Join Me, etc.) and status description.
+ */
 async function updateStatus(userId, status, statusDescription) {
   if (!userId) throw new Error("Missing user id");
   const { json } = await requestJson(`/users/${encodeURIComponent(userId)}`, {
     method: "PUT",
     headers: getHeaders(),
-    body: JSON.stringify({
-      status,
-      statusDescription,
-    }),
+    body: JSON.stringify({ status, statusDescription }),
   });
-
   return json;
 }
 
+/**
+ * Fetches a single message slot.
+ */
 async function getMessageSlot(userId, type, slot) {
   if (!userId) throw new Error("Missing user id");
   const path = `/message/${encodeURIComponent(userId)}/${encodeURIComponent(type)}/${encodeURIComponent(slot)}`;
@@ -177,21 +207,13 @@ async function getMessageSlot(userId, type, slot) {
     method: "GET",
     headers: getHeaders(),
   });
-
-  // If the API returns an array, find the specific slot object
-  if (Array.isArray(json)) {
-    return (
-      json.find((s) => s.slot === Number(slot)) || {
-        slot,
-        message: "",
-        remainingCooldownMinutes: 0,
-      }
-    );
-  }
-
-  return json;
+  return parseSlotResponse(json, slot);
 }
 
+/**
+ * Fetches all 12 message slots for a given type in small batches.
+ * Sequential batching is used to strictly avoid VRChat API rate limits (429).
+ */
 async function getMessageSlots(userId, type = "requestResponse") {
   if (!userId) throw new Error("Missing user id");
 
@@ -207,24 +229,7 @@ async function getMessageSlots(userId, type = "requestResponse") {
           method: "GET",
           headers: getHeaders(),
         })
-          .then(({ json }) => {
-            // json could be an object {message, slot, remainingCooldownMinutes, ...}
-            // or an array of slot objects if we hit the base endpoint
-            if (Array.isArray(json)) {
-              return (
-                json.find((s) => s.slot === j) || {
-                  slot: j,
-                  message: "",
-                  remainingCooldownMinutes: 0,
-                }
-              );
-            }
-            return {
-              slot: j,
-              message: json?.message || (typeof json === "string" ? json : ""),
-              remainingCooldownMinutes: json?.remainingCooldownMinutes || 0,
-            };
-          })
+          .then(({ json }) => parseSlotResponse(json, j))
           .catch((err) => {
             console.error(`Error fetching slot ${j} for ${type}:`, err.message);
             return { slot: j, message: "", remainingCooldownMinutes: 0 };
@@ -234,42 +239,37 @@ async function getMessageSlots(userId, type = "requestResponse") {
     const batchResults = await Promise.all(batchPromises);
     results.push(...batchResults);
 
-    // Small delay between batches
     if (i + batchSize < 12) {
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
   }
 
-  // Ensure we return a consistent format: [{ slot: 0, message: "..." }, ...]
-  return results
-    .sort((a, b) => a.slot - b.slot)
-    .map((r) => ({
-      slot: r.slot,
-      message: typeof r.message === "string" ? r.message : "",
-    }));
+  return results.sort((a, b) => a.slot - b.slot);
 }
 
+/**
+ * Updates a message slot. VRChat's response includes the state of all 12 slots,
+ * which the application uses to synchronize the entire local cache.
+ */
 async function updateMessageSlot(userId, type, slot, message) {
   if (!userId) throw new Error("Missing user id");
-  console.log(
-    `[API] updateMessageSlot: userId=${userId}, type=${type}, slot=${slot}, message="${message}"`,
-  );
+  console.log(`[API] updateMessageSlot: type=${type}, slot=${slot}`);
 
   const { json } = await requestJson(
     `/message/${encodeURIComponent(userId)}/${encodeURIComponent(type)}/${encodeURIComponent(slot)}`,
     {
       method: "PUT",
       headers: getHeaders(),
-      body: JSON.stringify({
-        message,
-      }),
+      body: JSON.stringify({ message }),
     },
   );
-  console.log(`[API] updateMessageSlot result:`, json);
 
   return json;
 }
 
+/**
+ * VRChat API interaction module.
+ */
 module.exports = {
   fetchInvites,
   sendInvite,
