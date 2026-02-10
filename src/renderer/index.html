@@ -34,13 +34,14 @@
       }
       body {
         margin: 0;
-        padding: 16px;
+        padding: 0 16px 16px 16px;
       }
       .header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 24px;
+        margin-bottom: 15px;
+        padding-top: 16px;
       }
       .user-header {
         display: flex;
@@ -72,6 +73,9 @@
         border-radius: 10px;
         padding: 12px;
         margin-bottom: 12px;
+      }
+      .card:first-of-type {
+        margin-top: 0;
       }
       .card.tabs-container {
         padding-top: 0;
@@ -159,6 +163,11 @@
         background: transparent;
         border: 1px solid var(--color-ghost-border);
         color: var(--color-ghost-text);
+      }
+      button.countdown-mode {
+        background: var(--color-secondary) !important;
+        color: #ff5f5f !important;
+        cursor: not-allowed;
       }
       .row {
         display: flex;
@@ -365,8 +374,8 @@
 
     <!-- Main View -->
     <div id="main-view" class="view">
-      <div class="card">
-        <div class="row space" style="align-items: center; margin-bottom: 12px;">
+      <div class="card" style="padding-top: 8px;">
+        <div class="row space" style="align-items: center; margin-bottom: 12px; margin-top: 0;">
           <strong>Sleep Mode</strong>
           <div id="status" class="status off">Disabled</div>
         </div>
@@ -450,12 +459,13 @@
                     <option value="11">Slot 12</option>
                   </select>
                 </div>
-                <button id="apply-slot" class="secondary" style="margin: 0; padding: 4px 12px; font-size: 11px; height: 28px;">Apply</button>
+                <button id="apply-slot" class="primary" style="margin: 0; padding: 4px 12px; font-size: 11px; height: 28px;">Apply</button>
               </div>
               <div class="row" style="margin-top: 8px;">
-                <textarea id="invite-slot-preview" style="margin: 0; flex: 1; min-height: 52px; height: 52px; background: var(--color-input-bg); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 8px; padding: 8px; box-sizing: border-box; resize: none;"></textarea>
+                <textarea id="invite-slot-preview" maxlength="64" style="margin: 0; flex: 1; min-height: 52px; height: 52px; background: var(--color-input-bg); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 8px; padding: 8px; box-sizing: border-box; resize: none;"></textarea>
               </div>
-              <div class="row" style="justify-content: flex-end; margin-top: 2px;">
+              <div class="row space" style="margin-top: 2px;">
+                <span class="hint" style="font-size: 10px; color: #f87171; flex: 1;">Overwrites the chosen slot and locks it for 60 minutes.</span>
                 <span id="invite-char-count" class="hint" style="font-size: 10px;">0/64</span>
               </div>
             </div>

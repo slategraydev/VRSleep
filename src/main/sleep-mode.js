@@ -36,26 +36,6 @@ function createSleepMode({
     if (!sleepMode) return;
     if (!isReadyForApi()) return;
 
-    // Check for manual status change during sleep mode
-    if (setSleepStatus !== null) {
-      try {
-        const user = await getCurrentUser();
-        const statusChanged =
-          user.status !== setSleepStatus ||
-          user.statusDescription !== setSleepDescription;
-        if (statusChanged) {
-          preSleepStatus = {
-            status: user.status,
-            statusDescription: user.statusDescription,
-          };
-          setSleepStatus = user.status;
-          setSleepDescription = user.statusDescription;
-        }
-      } catch (error) {
-        // Silent fail for status check
-      }
-    }
-
     let invites;
     try {
       invites = await fetchInvites();
@@ -165,12 +145,10 @@ function createSleepMode({
       settings.sleepStatusDescription &&
       settings.sleepStatusDescription.trim() !== ""
         ? settings.sleepStatusDescription.trim()
-        : null;
+        : ""; // Use empty string for comparison if null
 
-    const hasDescription = targetDescription !== null;
-
-    // If we are turning ON any custom status feature, capture pre-sleep status if we haven't yet
-    if (isAutoStatusEnabled && (hasStatusType || hasDescription)) {
+    // If we are turning ON any custom status feature
+    if (isAutoStatusEnabled && (hasStatusType || targetDescription !== "")) {
       try {
         const user = await getCurrentUser();
 
@@ -181,19 +159,23 @@ function createSleepMode({
           };
         }
 
-        // Use custom values if provided, otherwise fall back to pre-sleep values
         const targetStatus = hasStatusType
           ? settings.sleepStatus
           : preSleepStatus.status;
 
-        const finalDescription = hasDescription
-          ? targetDescription
-          : preSleepStatus.statusDescription;
+        // Check if status is already correct to avoid rate limits
+        if (
+          user.status === targetStatus &&
+          user.statusDescription === targetDescription
+        ) {
+          // Already correct, do nothing
+          return;
+        }
 
         const updatedUser = await updateStatus(
           user.id,
           targetStatus,
-          finalDescription,
+          targetDescription,
         );
 
         setSleepStatus = updatedUser.status;
@@ -206,15 +188,20 @@ function createSleepMode({
         log(`Failed to update status: ${error.message}`);
       }
     } else if (preSleepStatus) {
-      // Both are 'None'/blank, so we revert everything back to original
+      // Revert everything back to original if feature is disabled or cleared
       try {
-        log("Custom status cleared. Restoring pre-sleep status.");
         const user = await getCurrentUser();
-        await updateStatus(
-          user.id,
-          preSleepStatus.status,
-          preSleepStatus.statusDescription,
-        );
+        if (
+          user.status !== preSleepStatus.status ||
+          user.statusDescription !== preSleepStatus.statusDescription
+        ) {
+          log("Custom status cleared. Restoring pre-sleep status.");
+          await updateStatus(
+            user.id,
+            preSleepStatus.status,
+            preSleepStatus.statusDescription,
+          );
+        }
         preSleepStatus = null;
         setSleepStatus = null;
         setSleepDescription = null;

@@ -1,5 +1,5 @@
 const API_BASE = "https://api.vrchat.cloud/api/1";
-const { getAuthHeaders } = require("./vrcauth");
+const { getAuthHeaders, requestJson } = require("./vrcauth");
 
 function buildUrl(path) {
   const apiKey = process.env.VRC_API_KEY;
@@ -242,23 +242,23 @@ async function getMessageSlots(userId, type = "requestResponse") {
 
 async function updateMessageSlot(userId, type, slot, message) {
   if (!userId) throw new Error("Missing user id");
-
-  const url = buildUrl(
-    `/message/${encodeURIComponent(userId)}/${encodeURIComponent(type)}/${encodeURIComponent(slot)}`,
+  console.log(
+    `[API] updateMessageSlot: userId=${userId}, type=${type}, slot=${slot}, message="${message}"`,
   );
-  const response = await fetch(url, {
-    method: "PUT",
-    headers: getHeaders(),
-    body: JSON.stringify({
-      message,
-    }),
-  });
 
-  if (!response.ok) {
-    throw new Error(`Failed to update message slot (${response.status})`);
-  }
+  const { json } = await requestJson(
+    `/message/${encodeURIComponent(userId)}/${encodeURIComponent(type)}/${encodeURIComponent(slot)}`,
+    {
+      method: "PUT",
+      headers: getHeaders(),
+      body: JSON.stringify({
+        message,
+      }),
+    },
+  );
+  console.log(`[API] updateMessageSlot result:`, json);
 
-  return await response.json();
+  return json;
 }
 
 module.exports = {

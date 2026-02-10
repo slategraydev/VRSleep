@@ -9,6 +9,7 @@ function registerIpcHandlers({
   auth,
   updater,
   getFriends,
+  getCurrentUser,
 }) {
   ipcMain.handle("whitelist:get", () => getWhitelist());
   ipcMain.handle("whitelist:set", (_event, list) => setWhitelist(list));
@@ -113,6 +114,9 @@ function registerIpcHandlers({
   ipcMain.handle(
     "messages:update-slot",
     async (_event, { type, slot, message }) => {
+      console.log(
+        `IPC: messages:update-slot type=${type}, slot=${slot}, message="${message}"`,
+      );
       try {
         const authStatus = auth.getStatus();
         if (!authStatus.authenticated || !authStatus.userId) {
@@ -121,18 +125,21 @@ function registerIpcHandlers({
         const { updateMessageSlot } = require("../api/vrcapi");
         const { updateCachedSlot } = require("../stores/message-slots-store");
 
+        console.log(`Calling VRC API to update slot...`);
         const result = await updateMessageSlot(
           authStatus.userId,
           type,
           slot,
           message,
         );
+        console.log(`VRC API result:`, result);
 
         // Update cache
         updateCachedSlot(type, slot, message);
 
         return { ok: true, result };
       } catch (error) {
+        console.error(`Error in messages:update-slot:`, error);
         return { ok: false, error: error.message };
       }
     },

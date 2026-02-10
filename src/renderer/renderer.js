@@ -1,3 +1,8 @@
+window.onerror = function (message, source, lineno, colno, error) {
+  appendLog(`UI Error: ${message} at ${lineno}:${colno}`);
+  console.error(error);
+};
+
 const loginView = document.getElementById("login-view");
 const mainView = document.getElementById("main-view");
 const userHeader = document.getElementById("user-header");
@@ -192,34 +197,36 @@ whitelistInput.addEventListener("input", () => {
 });
 
 tabWhitelist.addEventListener("click", () => {
-  tabWhitelist.classList.add("active");
-  tabCustomizations.classList.remove("active");
-  tabActivity.classList.remove("active");
-  contentWhitelist.classList.add("active");
-  contentCustomizations.classList.remove("active");
-  contentActivity.classList.remove("active");
+  setActiveTab("whitelist");
 });
 
 tabCustomizations.addEventListener("click", () => {
-  tabCustomizations.classList.add("active");
-  tabWhitelist.classList.remove("active");
-  tabActivity.classList.remove("active");
-  contentCustomizations.classList.add("active");
-  contentWhitelist.classList.remove("active");
-  contentActivity.classList.remove("active");
+  setActiveTab("customizations");
   if (currentUser) {
     fetchSlots();
   }
 });
 
 tabActivity.addEventListener("click", () => {
-  tabActivity.classList.add("active");
-  tabWhitelist.classList.remove("active");
-  tabCustomizations.classList.remove("active");
-  contentActivity.classList.add("active");
-  contentWhitelist.classList.remove("active");
-  contentCustomizations.classList.remove("active");
+  setActiveTab("activity");
 });
+
+function setActiveTab(tabName) {
+  // Update UI
+  tabWhitelist.classList.toggle("active", tabName === "whitelist");
+  tabCustomizations.classList.toggle("active", tabName === "customizations");
+  tabActivity.classList.toggle("active", tabName === "activity");
+
+  contentWhitelist.classList.toggle("active", tabName === "whitelist");
+  contentCustomizations.classList.toggle(
+    "active",
+    tabName === "customizations",
+  );
+  contentActivity.classList.toggle("active", tabName === "activity");
+
+  // Save to settings
+  scheduleSettingsSave();
+}
 
 const STATUS_COLORS = {
   none: "#9ca3af",
@@ -245,7 +252,15 @@ function updateAutoStatusUI() {
   sleepStatus.style.color = STATUS_COLORS[sleepStatus.value] || "#e3e5e8";
 }
 
+let lastSavedSettings = null;
+
 async function saveSettings() {
+  const activeTab = tabWhitelist.classList.contains("active")
+    ? "whitelist"
+    : tabCustomizations.classList.contains("active")
+      ? "customizations"
+      : "activity";
+
   const settings = {
     sleepStatus: sleepStatus.value || "none",
     sleepStatusDescription: sleepStatusDescription.value || "",
@@ -253,7 +268,14 @@ async function saveSettings() {
     inviteMessageType: inviteMessageType.value || "message",
     autoStatusEnabled,
     inviteMessageEnabled,
+    activeTab,
   };
+
+  // Only save and trigger updates if settings have actually changed
+  const settingsString = JSON.stringify(settings);
+  if (lastSavedSettings === settingsString) return;
+  lastSavedSettings = settingsString;
+
   await window.sleepchat.setSettings(settings);
 }
 
@@ -261,7 +283,7 @@ function scheduleSettingsSave() {
   if (settingsTimer) clearTimeout(settingsTimer);
   settingsTimer = setTimeout(async () => {
     await saveSettings();
-  }, 1000);
+  }, 2000); // Increased to 2 seconds to be safer
 }
 
 autoStatusToggle.addEventListener("change", () => {
@@ -307,8 +329,11 @@ applySlotButton.addEventListener("click", async () => {
   const slot = Number(inviteMessageSlot.value);
   const message = inviteSlotPreview.value;
 
+  // Immediate UI feedback
   applySlotButton.disabled = true;
-  applySlotButton.textContent = "...";
+  applySlotButton.textContent = "Applying...";
+  applySlotButton.classList.add("countdown-mode");
+  applySlotButton.classList.remove("primary");
 
   try {
     const result = await window.sleepchat.updateMessageSlot(
@@ -319,20 +344,54 @@ applySlotButton.addEventListener("click", async () => {
     if (!result.ok) throw new Error(result.error);
 
     // Update local cache
-    if (cachedSlotsData[type] && cachedSlotsData[type][slot]) {
-      cachedSlotsData[type][slot].message = message;
-    } else if (cachedSlotsData[type]) {
-      cachedSlotsData[type][slot] = { slot, message };
-    }
+    if (!cachedSlotsData[type]) cachedSlotsData[type] = [];
+    cachedSlotsData[type][slot] = { slot, message };
 
-    appendLog(`Updated ${type} Slot ${slot + 1}`);
+    const unlockTime = new Date(
+      Date.now() + 60 * 60 * 1000,
+    ).toLocaleTimeString();
+    appendLog(`Updated ${type} Slot ${slot + 1}. Locked until ${unlockTime}.`);
+
+    // Start a cooldown timer on the button
+    startCooldown(3600);
   } catch (error) {
     appendLog(`Failed to update slot: ${error.message}`);
-  } finally {
-    applySlotButton.disabled = false;
-    applySlotButton.textContent = "Apply";
+
+    // If it's a rate limit error, try to extract minutes
+    const match = error.message.match(/wait (\d+) more minute/i);
+    if (match) {
+      const mins = parseInt(match[1], 10);
+      startCooldown(mins * 60);
+    } else {
+      applySlotButton.disabled = false;
+      applySlotButton.textContent = "Apply";
+      applySlotButton.classList.remove("countdown-mode");
+      applySlotButton.classList.add("primary");
+    }
   }
 });
+
+function startCooldown(seconds) {
+  let secondsLeft = seconds;
+  applySlotButton.disabled = true;
+  applySlotButton.classList.add("countdown-mode");
+  applySlotButton.classList.remove("primary");
+
+  const interval = setInterval(() => {
+    secondsLeft--;
+    if (secondsLeft <= 0) {
+      clearInterval(interval);
+      applySlotButton.disabled = false;
+      applySlotButton.textContent = "Apply";
+      applySlotButton.classList.remove("countdown-mode");
+      applySlotButton.classList.add("primary");
+    } else {
+      const mins = Math.floor(secondsLeft / 60);
+      const secs = secondsLeft % 60;
+      applySlotButton.textContent = `${mins}:${secs.toString().padStart(2, "0")}`;
+    }
+  }, 1000);
+}
 
 loginButton.addEventListener("click", async () => {
   setAuthHint("");
@@ -422,13 +481,29 @@ modalSubmit.addEventListener("click", async () => {
 });
 
 toggleButton.addEventListener("click", async () => {
-  const status = await window.sleepchat.getStatus();
-  if (status.sleepMode) {
-    await window.sleepchat.stopSleep();
-    setStatus(false);
-  } else {
-    await window.sleepchat.startSleep();
-    setStatus(true);
+  const isCurrentlyEnabled = statusBadge.classList.contains("on");
+
+  // Immediate UI feedback
+  toggleButton.disabled = true;
+  toggleButton.textContent = isCurrentlyEnabled
+    ? "Disabling..."
+    : "Enabling...";
+
+  try {
+    if (isCurrentlyEnabled) {
+      await window.sleepchat.stopSleep();
+      setStatus(false);
+    } else {
+      await window.sleepchat.startSleep();
+      setStatus(true);
+    }
+  } catch (error) {
+    appendLog(`Failed to toggle sleep mode: ${error.message}`);
+    // Revert to actual state
+    const status = await window.sleepchat.getStatus();
+    setStatus(status.sleepMode);
+  } finally {
+    toggleButton.disabled = false;
   }
 });
 
@@ -614,6 +689,10 @@ async function loadSettings() {
   autoStatusEnabled = !!settings.autoStatusEnabled;
   inviteMessageEnabled = !!settings.inviteMessageEnabled;
   updateAutoStatusUI();
+
+  if (settings.activeTab) {
+    setActiveTab(settings.activeTab);
+  }
 }
 
 let cachedSlotsData = {
