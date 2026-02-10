@@ -173,9 +173,7 @@ function registerIpcHandlers({
   ipcMain.handle(
     "messages:update-slot",
     async (_event, { type, slot, message }) => {
-      console.log(
-        `IPC: messages:update-slot type=${type}, slot=${slot}, message="${message}"`,
-      );
+      console.log(`IPC: messages:update-slot type=${type}, slot=${slot}`);
       try {
         const authStatus = auth.getStatus();
         if (!authStatus.authenticated || !authStatus.userId) {
@@ -189,19 +187,16 @@ function registerIpcHandlers({
           message,
         );
 
-        // Optimistic update or Sync from response
-        const cache = messageSlotsStore.getCachedSlots();
+        // VRChat returns an array of slots (all 12, or normalized to array)
         if (Array.isArray(result)) {
+          const cache = messageSlotsStore.getCachedSlots();
           cache[type] = result.map((s) => s.message);
+          messageSlotsStore.saveCachedSlots(cache);
+
           result.forEach((s) =>
             syncCooldown(type, s.slot, s.remainingCooldownMinutes),
           );
-        } else {
-          // Fallback: update just this slot if the API didn't return the full array
-          if (!cache[type]) cache[type] = Array(12).fill("");
-          cache[type][slot] = message;
         }
-        messageSlotsStore.saveCachedSlots(cache);
 
         return { ok: true, result };
       } catch (error) {

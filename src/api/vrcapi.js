@@ -202,7 +202,7 @@ async function updateStatus(userId, status, statusDescription) {
  */
 async function getMessageSlot(userId, type, slot) {
   if (!userId) throw new Error("Missing user id");
-  const path = `/message/${encodeURIComponent(userId)}/${encodeURIComponent(type)}/${encodeURIComponent(slot)}`;
+  const path = `/message/${encodeURIComponent(userId)}/${type}/${Number(slot)}`;
   const { json } = await requestJson(path, {
     method: "GET",
     headers: getHeaders(),
@@ -223,7 +223,7 @@ async function getMessageSlots(userId, type = "requestResponse") {
   for (let i = 0; i < 12; i += batchSize) {
     const batchPromises = [];
     for (let j = i; j < i + batchSize && j < 12; j++) {
-      const path = `/message/${encodeURIComponent(userId)}/${encodeURIComponent(type)}/${j}`;
+      const path = `/message/${encodeURIComponent(userId)}/${type}/${j}`;
       batchPromises.push(
         requestJson(path, {
           method: "GET",
@@ -253,16 +253,14 @@ async function getMessageSlots(userId, type = "requestResponse") {
  */
 async function updateMessageSlot(userId, type, slot, message) {
   if (!userId) throw new Error("Missing user id");
-  console.log(
-    `[API] updateMessageSlot: type=${type}, slot=${slot}, message="${message}"`,
-  );
+  console.log(`[API] updateMessageSlot: type=${type}, slot=${slot}`);
 
   const { json } = await requestJson(
-    `/message/${encodeURIComponent(userId)}/${encodeURIComponent(type)}/${Number(slot)}`,
+    `/message/${encodeURIComponent(userId)}/${type}/${Number(slot)}`,
     {
       method: "PUT",
       headers: getHeaders(),
-      body: JSON.stringify({ message: String(message) }),
+      body: JSON.stringify({ message }),
     },
   );
 

@@ -351,11 +351,11 @@ function updateApplyButtonState() {
 }
 
 /**
- * UI Heartbeat: Updates the 'Apply' button countdown every second.
+ * UI Heartbeat: Updates the 'Apply' button countdown every 500ms.
  */
 setInterval(() => {
   updateApplyButtonState();
-}, 1000);
+}, 500);
 
 /**
  * Background Polling: Refreshes ONLY the currently selected slot every 60 seconds.
@@ -648,26 +648,15 @@ applySlotButton.addEventListener("click", async () => {
     );
     if (!result.ok) throw new Error(result.error);
 
-    // Update local cache with the new message immediately
-    if (!cachedSlotsData[type]) {
-      cachedSlotsData[type] = Array(12)
-        .fill(null)
-        .map((_, i) => ({ slot: i, message: "" }));
-    }
-
     if (Array.isArray(result.result)) {
-      // API returned all 12 slots
       cachedSlotsData[type] = result.result;
+      const cooldowns = await window.sleepchat.getCooldowns();
+      if (cooldowns) slotCooldowns = cooldowns;
+      appendLog(`Updated Slot ${slot + 1}.`);
+      updateSlotPreviews();
     } else {
-      // Fallback: update just the targeted slot
-      cachedSlotsData[type][slot] = { slot, message };
+      appendLog(`Error: Unexpected response format from API.`);
     }
-
-    const cooldowns = await window.sleepchat.getCooldowns();
-    if (cooldowns) slotCooldowns = cooldowns;
-
-    appendLog(`Updated Slot ${slot + 1}.`);
-    updateSlotPreviews();
   } catch (e) {
     appendLog(`Error: ${e.message}`);
   } finally {
