@@ -1,12 +1,17 @@
 # VRSleep
 A minimal Electron app for automating simple VRChat tasks when you're sleeping. Auto respond to friend invite requests so they can join you, change your status automatically, and more!
 
-<img width="620" height="740" alt="image" src="https://github.com/user-attachments/assets/88bbffe3-9fce-49dd-8b6d-6d3761968e7a" />
+<img width="500" height="670" alt="VRSleep UI" src="https://github.com/user-attachments/assets/88bbffe3-9fce-49dd-8b6d-6d3761968e7a" />
 
 ## What it does
 - Polls VRChat invite notifications at a configurable interval.
 - If the sender is on your whitelist, sends an invite request back.
+- Automatically sets a custom status when you go to sleep and restores your old one when you wake up.
+- Manages all 12 VRChat message slots across Invite, Response, and Request types.
+- Tracks VRChat slot cooldowns accurately, even if you restart the app.
+- Uses sequential batching and on-demand fetching to avoid VRChat API rate limits (429 errors).
 - Runs with a tiny renderer and low-RAM defaults so it doesn't take away resources from VR.
+- Optimized to show the UI dashboard near-instantly on startup.
 
 ## Setup
 1. Install dependencies.
@@ -41,15 +46,20 @@ Then publish releases via GitHub, and the app will offer updates.
 This repo includes a GitHub Actions workflow that builds and publishes a release whenever you push a tag that starts with `v`.
 
 ```powershell
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.6.0
+git push origin v0.6.0
 ```
 
 The workflow will build the Windows installer and attach it to the GitHub Release.
 
 ## Security
 - Login cookies are stored encrypted using Electron safe storage.
+- Uses a secure context bridge to isolate the UI from Node.js internals.
 - Use Logout to wipe stored credentials.
 
 ## Notes
 - Whitelist entries can be VRChat user ids or display names (one per line).
+- VRChat enforces a 60-minute cooldown on slot updates; the app tracks this for you.
+
+---
+Made with ❤️ by -Jesski-, for itsLyxie and sheepsheep.

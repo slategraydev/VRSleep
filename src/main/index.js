@@ -1,43 +1,92 @@
-const { app, BrowserWindow } = require('electron');
-const { getWhitelist, setWhitelist } = require('../stores/whitelist-store');
-const { getSettings, setSettings } = require('../stores/settings-store');
-const { fetchInvites, sendInvite, deleteNotification, getFriends, getCurrentUser, updateStatus } = require('../api/vrcapi');
-const { login, verifyTwoFactor, logout, getAuthStatus, isReadyForApi } = require('../api/vrcauth');
-const { applyLowRamSettings } = require('./low-ram');
-const updater = require('./updater');
-const { createMainWindow } = require('./window');
-const { createSleepMode } = require('./sleep-mode');
-const { registerIpcHandlers } = require('./ipc');
+const { app, BrowserWindow } = require("electron");
 
+/**
+ * Main Entry Point for VRSleep.
+ * Orchestrates service initialization, IPC registration, and application lifecycle.
+ */
+
+try {
+  // Hot reloading for development environments
+  require("electron-reloader")(module);
+} catch (_) {}
+
+// Local Stores
+const { getWhitelist, setWhitelist } = require("../stores/whitelist-store");
+const { getSettings, setSettings } = require("../stores/settings-store");
+
+// VRChat API Integration
+const {
+  fetchInvites,
+  sendInvite,
+  deleteNotification,
+  getFriends,
+  getCurrentUser,
+  updateStatus,
+  getMessageSlots,
+} = require("../api/vrcapi");
+
+const {
+  login,
+  verifyTwoFactor,
+  logout,
+  getAuthStatus,
+  isReadyForApi,
+} = require("../api/vrcauth");
+
+// Internal Modules
+const { applyLowRamSettings } = require("./low-ram");
+const updater = require("./updater");
+const { createMainWindow } = require("./window");
+const { createSleepMode } = require("./sleep-mode");
+const { registerIpcHandlers } = require("./ipc");
+
+// State Management
 let mainWindow;
 let updaterInstance = null;
 let sleepModeInstance = null;
 let isQuitting = false;
 
+// Polling Configuration
 const DEFAULT_POLL_MS = 15000;
 const MIN_POLL_MS = 10000;
 
+/**
+ * Sends a log message to the renderer process for display in the Activity Log.
+ */
 function log(message) {
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('log', message);
+    mainWindow.webContents.send("log", message);
   }
 }
 
+/**
+ * Notifies the renderer that settings have changed globally.
+ */
 function notifySettingsChanged(settings) {
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('settings-changed', settings);
+    mainWindow.webContents.send("settings-changed", settings);
   }
 }
 
+// Optimization: Apply Electron-level performance tweaks before window creation
 applyLowRamSettings();
 
+/**
+ * Main Application Lifecycle
+ */
 app.whenReady().then(() => {
-  app.setAppUserModelId('com.sleepchat.app');
+  // Required for Windows Toast Notifications and taskbar grouping
+  app.setAppUserModelId("com.sleepchat.app");
 
+  // 1. Initialize UI
   mainWindow = createMainWindow(() => updater.checkForUpdates());
+
+  // 2. Initialize Updater
   updaterInstance = updater.setupAutoUpdater(() => mainWindow, log);
   updater.checkForUpdates();
 
+  // 3. Initialize Sleep Mode Engine
+  // Orchestrates the core logic of checking invites and responding.
   sleepModeInstance = createSleepMode({
     getWhitelist,
     fetchInvites,
@@ -46,6 +95,7 @@ app.whenReady().then(() => {
     isReadyForApi,
     getCurrentUser,
     updateStatus,
+    getMessageSlots,
     getSettings,
     setSettings: (settings) => {
       const next = setSettings(settings);
@@ -54,15 +104,18 @@ app.whenReady().then(() => {
     },
     log,
     pollIntervalMs: process.env.SLEEPCHAT_POLL_MS || DEFAULT_POLL_MS,
-    minPollMs: MIN_POLL_MS
+    minPollMs: MIN_POLL_MS,
   });
 
+  // 4. Register IPC Handlers
+  // Bridges the frontend UI with the backend services.
   registerIpcHandlers({
     getWhitelist,
     setWhitelist,
     getSettings,
     setSettings: (settings) => {
       const next = setSettings(settings);
+      // Immediately refresh engine state when settings change via UI
       if (sleepModeInstance) {
         sleepModeInstance.refreshStatus();
       }
@@ -74,36 +127,42 @@ app.whenReady().then(() => {
       login,
       verify: verifyTwoFactor,
       logout,
-      getStatus: getAuthStatus
+      getStatus: getAuthStatus,
     },
     updater: updaterInstance,
     getFriends,
-    getCurrentUser
+    getCurrentUser,
   });
 
-  app.on('activate', () => {
+  app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = createMainWindow(() => updater.checkForUpdates());
     }
   });
 });
 
-app.on('before-quit', async (event) => {
+/**
+ * Graceful Shutdown Handling
+ * Ensures that if Sleep Mode is active, we properly stop it (and restore VRC status)
+ * before the application process exits.
+ */
+app.on("before-quit", async (event) => {
   if (isQuitting) return;
+
   if (sleepModeInstance && sleepModeInstance.status().sleepMode) {
     event.preventDefault();
     isQuitting = true;
     try {
       await sleepModeInstance.stop();
     } catch (error) {
-      // Ignore error during quit
+      // Fail silently during shutdown to avoid hanging the process
     }
     app.quit();
   }
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
     app.quit();
   }
 });
